@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "./supabaseClient";
 
 // ─── ICONS ───────────────────────────────────────────────────────────────────
@@ -432,13 +432,13 @@ function Dashboard({ user, onSelect }) {
   const [loading, setLoading] = useState(true);
   const [modalNueva, setModalNueva] = useState(false);
 
-  const cargarAulas = async () => {
+  const cargarAulas = useCallback(async () => {
     const { data } = await supabase.from("aulas").select("*").eq("docente_id", user.id).order("created_at");
     setAulas(data || []);
     setLoading(false);
-  };
+  }, [user.id]);
 
-  useEffect(() => { cargarAulas(); }, [cargarAulas]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { cargarAulas(); }, [cargarAulas]);
 
   const crearAula = async ({ nombre, materia }) => {
     await supabase.from("aulas").insert({ docente_id: user.id, nombre, materia });
