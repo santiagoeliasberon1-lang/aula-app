@@ -1,0 +1,1063 @@
+import { useState, useEffect } from "react";
+import { supabase } from "./supabaseClient";
+
+// ─── ICONS ───────────────────────────────────────────────────────────────────
+const Icon = ({ d, size = 20, stroke = 1.8 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="round" strokeLinejoin="round">
+    <path d={d} />
+  </svg>
+);
+const IconUser     = () => <Icon d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" />;
+const IconLock     = () => <Icon d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2zM7 11V7a5 5 0 0 1 10 0v4" />;
+const IconChevron  = () => <Icon d="M9 18l6-6-6-6" />;
+const IconStar     = () => <Icon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />;
+const IconCog      = () => <Icon d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />;
+const IconLogout   = () => <Icon d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />;
+const IconCalendar = () => <Icon d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM16 2v4M8 2v4M3 10h18" />;
+const IconPen      = () => <Icon d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />;
+const IconUpload   = () => <Icon d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />;
+const IconPlus     = () => <Icon d="M12 5v14M5 12h14" />;
+const IconTrash    = () => <Icon d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" size={16} />;
+const IconUsers    = ({ size = 20 }) => <Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" size={size} />;
+const IconLoader   = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83">
+      <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite"/>
+    </path>
+  </svg>
+);
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+const today = () => new Date().toISOString().split("T")[0];
+const fmtDate = (d) => new Date(d + "T12:00:00").toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
+
+// ─── STYLES ──────────────────────────────────────────────────────────────────
+const styles = `
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #1a1a2e; --ink2: #3d3d5c; --ink3: #7b7b9d;
+    --paper: #f8f7f4; --paper2: #eeecea; --paper3: #e3e0da;
+    --accent: #2d6a4f; --accent2: #40916c; --accent-light: #d8f3dc;
+    --warn: #e63946; --warn-light: #fde8ea;
+    --gold: #e9c46a; --gold-light: #fef9e7;
+    --radius: 12px;
+    --shadow: 0 2px 8px rgba(26,26,46,0.08), 0 1px 3px rgba(26,26,46,0.05);
+    --shadow-lg: 0 8px 32px rgba(26,26,46,0.12), 0 2px 8px rgba(26,26,46,0.06);
+  }
+  html, body, #root { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); }
+  .app { min-height: 100vh; display: flex; flex-direction: column; }
+
+  /* LOGIN */
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--ink); position: relative; overflow: hidden; }
+  .login-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 80% 60% at 60% 40%, #2d6a4f22 0%, transparent 70%), radial-gradient(ellipse 50% 80% at 20% 80%, #40916c11 0%, transparent 60%); }
+  .login-card { position: relative; z-index: 1; background: #fff; border-radius: 20px; padding: 52px 48px; width: 100%; max-width: 420px; box-shadow: var(--shadow-lg); }
+  .login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 36px; }
+  .login-logo-mark { width: 36px; height: 36px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-family: 'DM Serif Display', serif; font-size: 18px; }
+  .login-logo-text { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--ink); }
+  .login-title { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--ink); margin-bottom: 6px; }
+  .login-sub { color: var(--ink3); font-size: 14px; margin-bottom: 32px; }
+  .field { margin-bottom: 18px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--ink2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .field-inner { position: relative; display: flex; align-items: center; }
+  .field-icon { position: absolute; left: 14px; color: var(--ink3); pointer-events: none; }
+  .field input { width: 100%; padding: 12px 14px 12px 42px; border: 1.5px solid var(--paper3); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 15px; color: var(--ink); background: var(--paper); outline: none; transition: border-color .2s; }
+  .field input:focus { border-color: var(--accent); background: #fff; }
+  .btn-primary { width: 100%; padding: 14px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: background .2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+  .login-switch { text-align: center; margin-top: 20px; font-size: 13px; color: var(--ink3); }
+  .login-switch span { color: var(--accent); font-weight: 600; cursor: pointer; }
+  .login-switch span:hover { text-decoration: underline; }
+  .login-error { color: var(--warn); font-size: 13px; margin-bottom: 14px; background: var(--warn-light); padding: 10px 14px; border-radius: 8px; }
+  .login-ok { color: var(--accent); font-size: 13px; margin-bottom: 14px; background: var(--accent-light); padding: 10px 14px; border-radius: 8px; }
+
+  /* TOPBAR */
+  .topbar { height: 60px; background: #fff; border-bottom: 1px solid var(--paper3); display: flex; align-items: center; padding: 0 24px; gap: 12px; position: sticky; top: 0; z-index: 100; }
+  .topbar-logo { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+  .topbar-logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-family: 'DM Serif Display', serif; font-size: 14px; }
+  .topbar-spacer { flex: 1; }
+  .topbar-user { font-size: 13px; color: var(--ink3); display: flex; align-items: center; gap: 6px; }
+  .topbar-avatar { width: 30px; height: 30px; background: var(--accent-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--accent); font-weight: 700; font-size: 13px; }
+  .btn-icon { background: none; border: none; cursor: pointer; color: var(--ink3); display: flex; align-items: center; justify-content: center; padding: 6px; border-radius: 8px; transition: background .15s, color .15s; }
+  .btn-icon:hover { background: var(--paper2); color: var(--ink); }
+
+  /* MAIN */
+  .main { flex: 1; padding: 32px 24px; max-width: 960px; margin: 0 auto; width: 100%; }
+  .page-header { margin-bottom: 28px; }
+  .page-header h1 { font-family: 'DM Serif Display', serif; font-size: 30px; color: var(--ink); margin-bottom: 4px; }
+  .page-header p { color: var(--ink3); font-size: 14px; }
+  .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink3); margin-bottom: 8px; }
+  .breadcrumb-link { cursor: pointer; color: var(--accent); font-weight: 500; }
+  .breadcrumb-link:hover { text-decoration: underline; }
+
+  /* AULAS */
+  .aulas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+  .aula-card { background: #fff; border: 1.5px solid var(--paper3); border-radius: var(--radius); padding: 24px 20px; cursor: pointer; transition: border-color .2s, box-shadow .2s, transform .15s; display: flex; flex-direction: column; gap: 4px; }
+  .aula-card:hover { border-color: var(--accent); box-shadow: var(--shadow); transform: translateY(-2px); }
+  .aula-tag { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--accent); margin-bottom: 4px; }
+  .aula-name { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--ink); line-height: 1; }
+  .aula-meta { font-size: 13px; color: var(--ink3); margin-top: 8px; }
+  .aula-chevron { align-self: flex-end; color: var(--paper3); margin-top: 12px; transition: color .2s; }
+  .aula-card:hover .aula-chevron { color: var(--accent); }
+  .add-aula-card { background: var(--paper); border: 2px dashed var(--paper3); border-radius: var(--radius); padding: 24px 20px; cursor: pointer; transition: border-color .2s, background .2s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 140px; }
+  .add-aula-card:hover { border-color: var(--accent); background: var(--accent-light); }
+  .add-aula-text { font-size: 13px; color: var(--ink3); font-weight: 500; }
+
+  /* AULA VIEW */
+  .aula-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+  .action-btn { background: #fff; border: 2px solid var(--paper3); border-radius: 16px; padding: 32px 24px; cursor: pointer; text-align: left; transition: all .2s; display: flex; flex-direction: column; gap: 10px; }
+  .action-btn:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
+  .action-btn.asistencia:hover { border-color: var(--accent); }
+  .action-btn.notas:hover { border-color: #e9c46a; }
+  .action-btn-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+  .action-btn.asistencia .action-btn-icon { background: var(--accent-light); color: var(--accent); }
+  .action-btn.notas .action-btn-icon { background: var(--gold-light); color: #b7860b; }
+  .action-btn-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--ink); }
+  .action-btn-desc { font-size: 13px; color: var(--ink3); line-height: 1.5; }
+  .alumno-mgr-btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 16px; background: #fff; border: 1.5px solid var(--paper3); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink2); cursor: pointer; transition: border-color .2s, color .2s; margin-bottom: 20px; }
+  .alumno-mgr-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* PANEL */
+  .panel { background: #fff; border: 1.5px solid var(--paper3); border-radius: 16px; padding: 28px; }
+  .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid var(--paper2); }
+  .panel-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--ink); }
+  .panel-date { font-size: 13px; color: var(--ink3); background: var(--paper); padding: 6px 12px; border-radius: 20px; display: flex; align-items: center; gap: 6px; }
+
+  /* ASISTENCIA */
+  .alumno-list { display: flex; flex-direction: column; gap: 2px; }
+  .alumno-row { display: flex; align-items: center; padding: 10px 12px; border-radius: 8px; transition: background .15s; }
+  .alumno-row:hover { background: var(--paper); }
+  .alumno-num { font-size: 12px; color: var(--ink3); width: 28px; flex-shrink: 0; }
+  .alumno-name { flex: 1; font-size: 14px; color: var(--ink); }
+  .toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+  .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+  .toggle-track { position: absolute; inset: 0; background: var(--paper3); border-radius: 12px; cursor: pointer; transition: background .2s; }
+  .toggle input:checked + .toggle-track { background: var(--accent); }
+  .toggle-thumb { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: transform .2s; pointer-events: none; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+  .toggle input:checked ~ .toggle-thumb { transform: translateX(20px); }
+  .status-badge { font-size: 11px; font-weight: 600; margin-left: 10px; padding: 2px 8px; border-radius: 20px; width: 68px; text-align: center; }
+  .status-badge.present { background: var(--accent-light); color: var(--accent); }
+  .status-badge.absent { background: var(--warn-light); color: var(--warn); }
+  .summary-bar { display: flex; gap: 16px; margin-bottom: 18px; }
+  .summary-chip { font-size: 13px; padding: 6px 14px; border-radius: 20px; font-weight: 500; }
+  .summary-chip.green { background: var(--accent-light); color: var(--accent); }
+  .summary-chip.red { background: var(--warn-light); color: var(--warn); }
+  .save-row { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+  .btn-save { padding: 11px 28px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .2s; }
+  .btn-save:hover { background: var(--accent2); }
+  .btn-save:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-ghost { padding: 11px 20px; background: none; border: 1.5px solid var(--paper3); color: var(--ink2); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; cursor: pointer; transition: border-color .2s; }
+  .btn-ghost:hover { border-color: var(--ink3); }
+
+  /* NOTAS */
+  .nota-form { display: flex; flex-direction: column; gap: 20px; }
+  .nota-select { width: 100%; padding: 12px 14px; border: 1.5px solid var(--paper3); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink); background: var(--paper); outline: none; appearance: none; transition: border-color .2s; }
+  .nota-select:focus { border-color: var(--accent); background: #fff; }
+  .nota-row { display: grid; grid-template-columns: 1fr 2fr; gap: 14px; }
+  .nota-input { width: 100%; padding: 12px 14px; border: 1.5px solid var(--paper3); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink); background: var(--paper); outline: none; transition: border-color .2s; }
+  .nota-input:focus { border-color: #e9c46a; background: #fff; }
+  .nota-preview { background: var(--gold-light); border: 1.5px solid #e9c46a33; border-radius: 12px; padding: 18px; display: flex; justify-content: space-between; align-items: center; }
+  .nota-preview-label { font-size: 13px; color: var(--ink3); }
+  .nota-preview-val { font-family: 'DM Serif Display', serif; font-size: 36px; color: var(--ink); }
+  .nota-preview-sub { font-size: 12px; color: var(--ink3); margin-top: 2px; }
+  .registros-title { font-size: 14px; font-weight: 600; color: var(--ink2); margin-bottom: 12px; text-transform: uppercase; letter-spacing: .05em; }
+  .registro-list { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; }
+  .registro-item { display: flex; align-items: center; gap: 12px; background: var(--paper); border-radius: 8px; padding: 10px 14px; font-size: 13px; }
+  .registro-item .ri-date { color: var(--ink3); flex-shrink: 0; }
+  .registro-item .ri-name { flex: 1; color: var(--ink); font-weight: 500; }
+  .registro-item .ri-val { font-weight: 700; color: var(--ink); }
+  .registro-item .ri-label { color: var(--ink3); margin-left: auto; }
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--ink3); font-size: 14px; }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(26,26,46,.45); backdrop-filter: blur(4px); z-index: 200; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .modal { background: #fff; border-radius: 20px; width: 100%; max-width: 560px; box-shadow: var(--shadow-lg); overflow: hidden; }
+  .modal-header { padding: 24px 28px 20px; border-bottom: 1px solid var(--paper2); display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--ink); }
+  .modal-close { background: none; border: none; cursor: pointer; color: var(--ink3); font-size: 22px; line-height: 1; padding: 4px 8px; border-radius: 6px; transition: background .15s; }
+  .modal-close:hover { background: var(--paper2); }
+  .modal-body { padding: 24px 28px; max-height: 72vh; overflow-y: auto; }
+  .modal-footer { padding: 16px 28px; border-top: 1px solid var(--paper2); display: flex; justify-content: flex-end; gap: 10px; }
+  .modal-tabs { display: flex; gap: 0; margin-bottom: 22px; border: 1.5px solid var(--paper3); border-radius: 10px; overflow: hidden; }
+  .modal-tab { flex: 1; padding: 10px; background: none; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink3); cursor: pointer; transition: background .15s, color .15s; }
+  .modal-tab.active { background: var(--ink); color: #fff; }
+  .dropzone { border: 2px dashed var(--paper3); border-radius: 14px; padding: 40px 20px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; }
+  .dropzone:hover, .dropzone.drag { border-color: var(--accent); background: var(--accent-light); }
+  .dropzone-icon { color: var(--ink3); margin-bottom: 12px; }
+  .dropzone-title { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+  .dropzone-sub { font-size: 13px; color: var(--ink3); }
+  .dropzone input[type=file] { display: none; }
+  .template-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; font-size: 13px; color: var(--accent); font-weight: 500; cursor: pointer; text-decoration: underline; }
+  .preview-list { display: flex; flex-direction: column; gap: 4px; margin-top: 16px; max-height: 240px; overflow-y: auto; }
+  .preview-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--paper); border-radius: 8px; font-size: 13px; }
+  .preview-num { color: var(--ink3); width: 24px; flex-shrink: 0; font-size: 12px; }
+  .preview-name { flex: 1; color: var(--ink); }
+  .preview-del { background: none; border: none; cursor: pointer; color: var(--ink3); padding: 2px 4px; border-radius: 4px; display: flex; align-items: center; transition: color .15s; }
+  .preview-del:hover { color: var(--warn); }
+  .manual-input-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .manual-input { flex: 1; padding: 10px 14px; border: 1.5px solid var(--paper3); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink); background: var(--paper); outline: none; transition: border-color .2s; }
+  .manual-input:focus { border-color: var(--accent); background: #fff; }
+  .btn-add { padding: 10px 16px; background: var(--accent); color: #fff; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background .2s; white-space: nowrap; }
+  .btn-add:hover { background: var(--accent2); }
+  .parse-error { background: var(--warn-light); color: var(--warn); border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-top: 10px; }
+  .parse-ok { background: var(--accent-light); color: var(--accent); border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-top: 10px; }
+
+  /* RESUMEN */
+  .resumen-search { width: 100%; padding: 11px 16px; border: 1.5px solid var(--paper3); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink); background: var(--paper); outline: none; margin-bottom: 16px; transition: border-color .2s; }
+  .resumen-search:focus { border-color: var(--accent); background: #fff; }
+  .resumen-tabs { display: flex; gap: 6px; margin-bottom: 20px; }
+  .rtab { padding: 7px 16px; border-radius: 20px; border: 1.5px solid var(--paper3); background: #fff; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; color: var(--ink3); cursor: pointer; transition: all .18s; }
+  .rtab.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .resumen-grid { display: flex; flex-direction: column; gap: 10px; }
+  .alumno-card { background: #fff; border: 1.5px solid var(--paper3); border-radius: 14px; overflow: hidden; transition: box-shadow .2s; }
+  .alumno-card:hover { box-shadow: var(--shadow); }
+  .alumno-card-header { display: flex; align-items: center; gap: 14px; padding: 16px 20px; cursor: pointer; }
+  .alumno-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--paper2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: var(--ink2); flex-shrink: 0; }
+  .alumno-card-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--ink); }
+  .alumno-card-stats { display: flex; gap: 10px; align-items: center; }
+  .astat { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .astat-val { font-size: 15px; font-weight: 700; color: var(--ink); }
+  .astat-val.green { color: var(--accent); }
+  .astat-val.red { color: var(--warn); }
+  .astat-val.gold { color: #b7860b; }
+  .astat-lbl { font-size: 10px; color: var(--ink3); text-transform: uppercase; letter-spacing: .05em; }
+  .astat-sep { width: 1px; height: 28px; background: var(--paper3); }
+  .alumno-card-expand { color: var(--ink3); transition: transform .2s; margin-left: 8px; }
+  .alumno-card-expand.open { transform: rotate(90deg); }
+  .alumno-card-body { border-top: 1px solid var(--paper2); padding: 16px 20px; background: var(--paper); }
+  .alumno-body-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .alumno-section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--ink3); margin-bottom: 10px; }
+  .asist-calendar { display: flex; flex-wrap: wrap; gap: 5px; }
+  .asist-dot { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; }
+  .asist-dot.p { background: var(--accent-light); color: var(--accent); }
+  .asist-dot.a { background: var(--warn-light); color: var(--warn); }
+  .nota-pill { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; background: #fff; border-radius: 8px; margin-bottom: 5px; font-size: 13px; }
+  .nota-pill-label { color: var(--ink2); }
+  .nota-pill-val { font-weight: 700; padding: 2px 10px; border-radius: 12px; font-size: 13px; }
+  .nota-pill-val.alta { background: var(--accent-light); color: var(--accent); }
+  .nota-pill-val.media { background: var(--gold-light); color: #b7860b; }
+  .nota-pill-val.baja { background: var(--warn-light); color: var(--warn); }
+  .promedio-bar { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .bar-track { flex: 1; height: 6px; background: var(--paper3); border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 3px; transition: width .6s ease; }
+  .resumen-stats-top { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+  .rst { background: #fff; border: 1.5px solid var(--paper3); border-radius: 12px; padding: 14px 16px; }
+  .rst-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--ink3); margin-bottom: 4px; }
+  .rst-val { font-family: 'DM Serif Display', serif; font-size: 24px; color: var(--ink); }
+  .rst-val.green { color: var(--accent); }
+  .rst-val.red { color: var(--warn); }
+  .rst-val.gold { color: #b7860b; }
+
+  /* CONFIG */
+  .sub-card { background: linear-gradient(135deg, #1a1a2e, #2d3561); color: #fff; border-radius: 16px; padding: 28px; margin-bottom: 20px; }
+  .sub-card-title { font-family: 'DM Serif Display', serif; font-size: 20px; margin-bottom: 6px; }
+  .sub-card-sub { font-size: 13px; opacity: .6; margin-bottom: 20px; }
+  .sub-stat { background: rgba(255,255,255,.08); border-radius: 10px; padding: 14px 18px; margin-bottom: 10px; }
+  .sub-stat-label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; opacity: .5; margin-bottom: 4px; }
+  .sub-stat-val { font-size: 15px; font-weight: 600; }
+  .sub-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(233,196,106,.15); color: var(--gold); border: 1px solid rgba(233,196,106,.3); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 600; margin-top: 14px; }
+
+  /* LOADING */
+  .loading-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--paper); color: var(--ink3); gap: 10px; font-size: 15px; }
+
+  /* NUEVA AULA FORM */
+  .nueva-aula-form { display: flex; flex-direction: column; gap: 16px; }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--ink); color: #fff; padding: 13px 20px; border-radius: 10px; font-size: 14px; box-shadow: var(--shadow-lg); z-index: 1000; animation: slideUp .25s ease; }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (max-width: 700px) {
+    .aula-actions { grid-template-columns: 1fr; }
+    .nota-row { grid-template-columns: 1fr; }
+    .login-card { padding: 36px 24px; margin: 16px; }
+    .main { padding: 20px 16px; }
+    .resumen-stats-top { grid-template-columns: 1fr 1fr; }
+    .alumno-body-grid { grid-template-columns: 1fr; }
+  }
+`;
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────
+function Toast({ msg }) {
+  return msg ? <div className="toast">{msg}</div> : null;
+}
+
+// ─── LOGIN / REGISTRO ─────────────────────────────────────────────────────────
+function Login({ onLogin }) {
+  const [modo, setModo] = useState("login"); // login | registro
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [err, setErr] = useState("");
+  const [ok, setOk] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !pass) { setErr("Completá todos los campos."); return; }
+    setLoading(true); setErr("");
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
+    setLoading(false);
+    if (error) { setErr("Correo o contraseña incorrectos."); return; }
+    onLogin(data.user);
+  };
+
+  const handleRegistro = async () => {
+    if (!email || !pass || !nombre) { setErr("Completá todos los campos."); return; }
+    if (pass.length < 6) { setErr("La contraseña debe tener al menos 6 caracteres."); return; }
+    setLoading(true); setErr("");
+    const { error } = await supabase.auth.signUp({
+      email, password: pass,
+      options: { data: { nombre_completo: nombre } }
+    });
+    setLoading(false);
+    if (error) { setErr(error.message); return; }
+    setOk("¡Cuenta creada! Revisá tu correo para confirmar y luego iniciá sesión.");
+    setModo("login");
+  };
+
+  const handle = modo === "login" ? handleLogin : handleRegistro;
+
+  return (
+    <div className="login-wrap">
+      <div className="login-bg" />
+      <div className="login-card">
+        <div className="login-logo">
+          <div className="login-logo-mark">A</div>
+          <span className="login-logo-text">Aula</span>
+        </div>
+        <h1 className="login-title">{modo === "login" ? "Bienvenido" : "Crear cuenta"}</h1>
+        <p className="login-sub">{modo === "login" ? "Ingresá a tu panel docente" : "Registrate para empezar"}</p>
+        {err && <div className="login-error">{err}</div>}
+        {ok && <div className="login-ok">{ok}</div>}
+        {modo === "registro" && (
+          <div className="field">
+            <label>Nombre completo</label>
+            <div className="field-inner">
+              <span className="field-icon"><IconUser /></span>
+              <input type="text" placeholder="Prof. María González" value={nombre} onChange={e => { setNombre(e.target.value); setErr(""); }} />
+            </div>
+          </div>
+        )}
+        <div className="field">
+          <label>Correo electrónico</label>
+          <div className="field-inner">
+            <span className="field-icon"><IconUser /></span>
+            <input type="email" placeholder="tu@correo.com" value={email} onChange={e => { setEmail(e.target.value); setErr(""); }} onKeyDown={e => e.key === "Enter" && handle()} />
+          </div>
+        </div>
+        <div className="field">
+          <label>Contraseña</label>
+          <div className="field-inner">
+            <span className="field-icon"><IconLock /></span>
+            <input type="password" placeholder="••••••••" value={pass} onChange={e => { setPass(e.target.value); setErr(""); }} onKeyDown={e => e.key === "Enter" && handle()} />
+          </div>
+        </div>
+        <button className="btn-primary" onClick={handle} disabled={loading}>
+          {loading && <IconLoader />}
+          {loading ? "Cargando..." : modo === "login" ? "Iniciar sesión" : "Crear cuenta"}
+        </button>
+        <div className="login-switch">
+          {modo === "login" ? <>¿No tenés cuenta? <span onClick={() => { setModo("registro"); setErr(""); setOk(""); }}>Registrate</span></> : <>¿Ya tenés cuenta? <span onClick={() => { setModo("login"); setErr(""); setOk(""); }}>Iniciá sesión</span></>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── TOPBAR ───────────────────────────────────────────────────────────────────
+function Topbar({ user, onLogout, onConfig }) {
+  const nombre = user.user_metadata?.nombre_completo || user.email;
+  const initials = nombre.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  return (
+    <div className="topbar">
+      <div className="topbar-logo"><div className="topbar-logo-mark">A</div>Aula</div>
+      <div className="topbar-spacer" />
+      <div className="topbar-user">
+        <span style={{ fontSize: 13, color: "var(--ink3)" }}>{nombre}</span>
+        <div className="topbar-avatar">{initials}</div>
+      </div>
+      <button className="btn-icon" title="Configuración" onClick={onConfig}><IconCog /></button>
+      <button className="btn-icon" title="Cerrar sesión" onClick={onLogout}><IconLogout /></button>
+    </div>
+  );
+}
+
+// ─── MODAL NUEVA AULA ─────────────────────────────────────────────────────────
+function NuevaAulaModal({ onClose, onCrear }) {
+  const [nombre, setNombre] = useState("");
+  const [materia, setMateria] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const crear = async () => {
+    if (!nombre.trim() || !materia.trim()) return;
+    setLoading(true);
+    await onCrear({ nombre: nombre.trim(), materia: materia.trim() });
+    setLoading(false);
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <span className="modal-title">Nueva Aula</span>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div className="nueva-aula-form">
+            <div className="field">
+              <label>Nombre del aula</label>
+              <input className="manual-input" style={{ width: "100%" }} type="text" placeholder="ej: 6° A" value={nombre} onChange={e => setNombre(e.target.value)} onKeyDown={e => e.key === "Enter" && crear()} />
+            </div>
+            <div className="field">
+              <label>Materia</label>
+              <input className="manual-input" style={{ width: "100%" }} type="text" placeholder="ej: Lengua y Literatura" value={materia} onChange={e => setMateria(e.target.value)} onKeyDown={e => e.key === "Enter" && crear()} />
+            </div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+          <button className="btn-save" onClick={crear} disabled={!nombre.trim() || !materia.trim() || loading}>
+            {loading ? "Creando..." : "Crear aula"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── DASHBOARD ────────────────────────────────────────────────────────────────
+function Dashboard({ user, onSelect }) {
+  const [aulas, setAulas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalNueva, setModalNueva] = useState(false);
+
+  const cargarAulas = async () => {
+    const { data } = await supabase.from("aulas").select("*").eq("docente_id", user.id).order("created_at");
+    setAulas(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => { cargarAulas(); }, []);
+
+  const crearAula = async ({ nombre, materia }) => {
+    await supabase.from("aulas").insert({ docente_id: user.id, nombre, materia });
+    cargarAulas();
+  };
+
+  if (loading) return <div className="main"><div className="empty-state"><IconLoader /> Cargando aulas...</div></div>;
+
+  return (
+    <div className="main">
+      {modalNueva && <NuevaAulaModal onClose={() => setModalNueva(false)} onCrear={crearAula} />}
+      <div className="page-header">
+        <h1>Mis Aulas</h1>
+        <p>Seleccioná un aula para registrar asistencia o notas</p>
+      </div>
+      <div className="aulas-grid">
+        {aulas.map(a => (
+          <div className="aula-card" key={a.id} onClick={() => onSelect(a)}>
+            <div className="aula-tag">{a.materia}</div>
+            <div className="aula-name">{a.nombre}</div>
+            <div className="aula-meta">{a.total_alumnos || 0} alumnos</div>
+            <div className="aula-chevron"><IconChevron /></div>
+          </div>
+        ))}
+        <div className="add-aula-card" onClick={() => setModalNueva(true)}>
+          <IconPlus size={28} />
+          <span className="add-aula-text">Nueva aula</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MODAL GESTIÓN ALUMNOS ────────────────────────────────────────────────────
+function GestionAlumnosModal({ aula, user, onClose, onGuardar }) {
+  const [tab, setTab] = useState("csv");
+  const [drag, setDrag] = useState(false);
+  const [preview, setPreview] = useState([]);
+  const [parseMsg, setParseMsg] = useState(null);
+  const [nombreManual, setNombreManual] = useState("");
+  const [listaManual, setListaManual] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (tab === "manual") {
+      supabase.from("alumnos").select("nombre").eq("aula_id", aula.id).order("nombre")
+        .then(({ data }) => setListaManual((data || []).map(a => a.nombre)));
+    }
+  }, [tab, aula.id]);
+
+  const parsearCSV = (texto) => {
+    const lineas = texto.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const encabezados = ["nombre", "apellido", "alumno", "name", "student"];
+    const inicio = encabezados.some(e => lineas[0]?.toLowerCase().includes(e)) ? 1 : 0;
+    return lineas.slice(inicio).map(l => {
+      const cols = l.split(/[,;\t]/).map(c => c.trim()).filter(Boolean);
+      if (cols.length >= 2) return `${cols[0]}, ${cols[1]}`;
+      return cols[0];
+    }).filter(n => n.length > 2);
+  };
+
+  const procesarArchivo = (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const nombres = parsearCSV(e.target.result);
+      if (nombres.length === 0) {
+        setParseMsg({ tipo: "err", texto: "No se encontraron nombres válidos. Revisá el formato." });
+      } else {
+        setPreview(nombres);
+        setParseMsg({ tipo: "ok", texto: `Se detectaron ${nombres.length} alumnos. Revisá y confirmá.` });
+      }
+    };
+    reader.readAsText(file, "UTF-8");
+  };
+
+  const descargarPlantilla = () => {
+    const blob = new Blob(["Apellido,Nombre\nGarcía,Juan\nLópez,María"], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `plantilla_alumnos_${aula.nombre.replace(/\s/g, "_")}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
+  const confirmar = async () => {
+    const lista = tab === "csv" ? preview : listaManual;
+    if (lista.length === 0) return;
+    setLoading(true);
+    await supabase.from("alumnos").delete().eq("aula_id", aula.id).eq("docente_id", user.id);
+    await supabase.from("alumnos").insert(lista.map(nombre => ({ docente_id: user.id, aula_id: aula.id, nombre })));
+    await supabase.from("aulas").update({ total_alumnos: lista.length }).eq("id", aula.id);
+    setLoading(false);
+    onGuardar(lista);
+    onClose();
+  };
+
+  const listaActiva = tab === "csv" ? preview : listaManual;
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <span className="modal-title">Alumnos — {aula.nombre}</span>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div className="modal-tabs">
+            <button className={`modal-tab ${tab === "csv" ? "active" : ""}`} onClick={() => setTab("csv")}>📄 Importar CSV</button>
+            <button className={`modal-tab ${tab === "manual" ? "active" : ""}`} onClick={() => setTab("manual")}>✏️ Carga manual</button>
+          </div>
+          {tab === "csv" && (
+            <>
+              <label className={`dropzone ${drag ? "drag" : ""}`}
+                onDragOver={e => { e.preventDefault(); setDrag(true); }}
+                onDragLeave={() => setDrag(false)}
+                onDrop={e => { e.preventDefault(); setDrag(false); procesarArchivo(e.dataTransfer.files[0]); }}>
+                <input type="file" accept=".csv,.txt" onChange={e => procesarArchivo(e.target.files[0])} />
+                <div className="dropzone-icon"><IconUpload size={32} /></div>
+                <div className="dropzone-title">Arrastrá tu archivo o hacé clic para seleccionar</div>
+                <div className="dropzone-sub">Formatos: CSV, TXT</div>
+              </label>
+              <div className="template-link" onClick={descargarPlantilla}>⬇ Descargar plantilla CSV</div>
+              {parseMsg && <div className={parseMsg.tipo === "ok" ? "parse-ok" : "parse-error"}>{parseMsg.texto}</div>}
+              <div className="preview-list">
+                {preview.map((n, i) => (
+                  <div className="preview-item" key={i}>
+                    <span className="preview-num">{i + 1}</span>
+                    <span className="preview-name">{n}</span>
+                    <button className="preview-del" onClick={() => setPreview(p => p.filter((_, idx) => idx !== i))}><IconTrash /></button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+          {tab === "manual" && (
+            <>
+              <div className="manual-input-row">
+                <input className="manual-input" type="text" placeholder="Apellido, Nombre" value={nombreManual}
+                  onChange={e => setNombreManual(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && nombreManual.trim()) { setListaManual(l => [...l, nombreManual.trim()]); setNombreManual(""); } }} />
+                <button className="btn-add" onClick={() => { if (nombreManual.trim()) { setListaManual(l => [...l, nombreManual.trim()]); setNombreManual(""); } }}>
+                  <IconPlus size={16} /> Agregar
+                </button>
+              </div>
+              <div className="preview-list">
+                {listaManual.length === 0 && <div style={{ textAlign: "center", padding: "24px", color: "var(--ink3)", fontSize: 13 }}>Escribí un nombre y presioná Agregar.</div>}
+                {listaManual.map((n, i) => (
+                  <div className="preview-item" key={i}>
+                    <span className="preview-num">{i + 1}</span>
+                    <span className="preview-name">{n}</span>
+                    <button className="preview-del" onClick={() => setListaManual(l => l.filter((_, idx) => idx !== i))}><IconTrash /></button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+        <div className="modal-footer">
+          <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+          <button className="btn-save" onClick={confirmar} disabled={listaActiva.length === 0 || loading}
+            style={{ opacity: listaActiva.length > 0 ? 1 : .4 }}>
+            {loading ? "Guardando..." : `Guardar (${listaActiva.length} alumnos)`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── AULA VIEW ────────────────────────────────────────────────────────────────
+function AulaView({ aula, user, onBack, onAction }) {
+  const [alumnos, setAlumnos] = useState([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [asistCount, setAsistCount] = useState(0);
+  const [notasCount, setNotasCount] = useState(0);
+
+  useEffect(() => {
+    supabase.from("alumnos").select("nombre").eq("aula_id", aula.id).then(({ data }) => setAlumnos((data || []).map(a => a.nombre)));
+    supabase.from("asistencia").select("id", { count: "exact" }).eq("aula_id", aula.id).eq("docente_id", user.id).then(({ count }) => setAsistCount(count || 0));
+    supabase.from("notas").select("id", { count: "exact" }).eq("aula_id", aula.id).eq("docente_id", user.id).then(({ count }) => setNotasCount(count || 0));
+  }, [aula.id, user.id]);
+
+  return (
+    <div className="main">
+      {modalOpen && <GestionAlumnosModal aula={aula} user={user} onClose={() => setModalOpen(false)} onGuardar={lista => setAlumnos(lista)} />}
+      <div className="breadcrumb">
+        <span className="breadcrumb-link" onClick={onBack}>Mis Aulas</span>
+        <IconChevron /><span>{aula.nombre}</span>
+      </div>
+      <div className="page-header" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <h1>{aula.nombre}</h1>
+          <p>{aula.materia} · {alumnos.length} alumnos</p>
+        </div>
+        <button className="alumno-mgr-btn" onClick={() => setModalOpen(true)}>
+          <IconUsers size={16} /> Gestionar alumnos
+        </button>
+      </div>
+
+      {alumnos.length === 0 && (
+        <div style={{ background: "var(--gold-light)", border: "1.5px solid #e9c46a55", borderRadius: 14, padding: "20px 24px", marginBottom: 24, display: "flex", alignItems: "center", gap: 16 }}>
+          <span style={{ fontSize: 28 }}>📋</span>
+          <div>
+            <div style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 4 }}>Este aula no tiene alumnos cargados</div>
+            <div style={{ fontSize: 13, color: "var(--ink3)" }}>Hacé clic en <strong>Gestionar alumnos</strong> para importar desde CSV o cargar manualmente.</div>
+          </div>
+        </div>
+      )}
+
+      <div className="aula-actions">
+        <button className="action-btn asistencia" onClick={() => onAction("asistencia")}>
+          <div className="action-btn-icon"><IconCalendar /></div>
+          <div className="action-btn-title">Registrar Asistencia</div>
+          <div className="action-btn-desc">Marcá presentes y ausentes con un toggle rápido.</div>
+          <div style={{ fontSize: 12, color: "var(--ink3)", marginTop: 4 }}>{asistCount} registros</div>
+        </button>
+        <button className="action-btn notas" onClick={() => onAction("notas")}>
+          <div className="action-btn-icon"><IconStar /></div>
+          <div className="action-btn-title">Registrar Nota</div>
+          <div className="action-btn-desc">Ingresá calificaciones por alumno y actividad.</div>
+          <div style={{ fontSize: 12, color: "var(--ink3)", marginTop: 4 }}>{notasCount} notas cargadas</div>
+        </button>
+        <button className="action-btn"
+          onMouseEnter={e => e.currentTarget.style.borderColor = "#6366f1"}
+          onMouseLeave={e => e.currentTarget.style.borderColor = "var(--paper3)"}
+          onClick={() => onAction("resumen")}>
+          <div className="action-btn-icon" style={{ background: "#ede9fe", color: "#6d28d9" }}><IconUsers /></div>
+          <div className="action-btn-title">Resumen del Curso</div>
+          <div className="action-btn-desc">Vista consolidada por alumno: asistencia y notas.</div>
+          <div style={{ fontSize: 12, color: "var(--ink3)", marginTop: 4 }}>{alumnos.length} alumnos</div>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── ASISTENCIA ───────────────────────────────────────────────────────────────
+function Asistencia({ aula, user, onBack, onToast }) {
+  const [alumnos, setAlumnos] = useState([]);
+  const [lista, setLista] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const cargar = async () => {
+      const { data: alumnosData } = await supabase.from("alumnos").select("nombre").eq("aula_id", aula.id).order("nombre");
+      const nombres = (alumnosData || []).map(a => a.nombre);
+      setAlumnos(nombres);
+      const { data: asistHoy } = await supabase.from("asistencia").select("alumno_nombre,presente").eq("aula_id", aula.id).eq("docente_id", user.id).eq("fecha", today());
+      const mapaHoy = {};
+      (asistHoy || []).forEach(r => { mapaHoy[r.alumno_nombre] = r.presente; });
+      setLista(nombres.map((n, i) => ({ id: i, nombre: n, presente: mapaHoy[n] !== undefined ? mapaHoy[n] : true })));
+      setLoading(false);
+    };
+    cargar();
+  }, [aula.id, user.id]);
+
+  const toggle = (id) => setLista(l => l.map(a => a.id === id ? { ...a, presente: !a.presente } : a));
+  const presentes = lista.filter(a => a.presente).length;
+
+  const guardar = async () => {
+    setSaving(true);
+    await supabase.from("asistencia").delete().eq("aula_id", aula.id).eq("docente_id", user.id).eq("fecha", today());
+    await supabase.from("asistencia").insert(
+      lista.map(a => ({ docente_id: user.id, aula_id: aula.id, aula_nombre: aula.nombre, alumno_nombre: a.nombre, fecha: today(), presente: a.presente }))
+    );
+    setSaving(false);
+    onToast("✓ Asistencia guardada correctamente");
+  };
+
+  if (loading) return <div className="main"><div className="empty-state"><IconLoader /> Cargando...</div></div>;
+
+  return (
+    <div className="main">
+      <div className="breadcrumb">
+        <span className="breadcrumb-link" onClick={onBack}>Mis Aulas</span>
+        <IconChevron /><span>{aula.nombre}</span><IconChevron /><span>Asistencia</span>
+      </div>
+      <div className="page-header">
+        <h1>Registrar Asistencia</h1>
+        <p style={{ textTransform: "capitalize" }}>{fmtDate(today())}</p>
+      </div>
+      <div className="panel">
+        <div className="panel-header">
+          <span className="panel-title">{aula.nombre} · {aula.materia}</span>
+          <span className="panel-date"><IconCalendar />{today()}</span>
+        </div>
+        {lista.length === 0
+          ? <div className="empty-state">No hay alumnos en esta aula. Cargalos primero desde "Gestionar alumnos".</div>
+          : <>
+            <div className="summary-bar">
+              <span className="summary-chip green">✓ Presentes: {presentes}</span>
+              <span className="summary-chip red">✗ Ausentes: {lista.length - presentes}</span>
+            </div>
+            <div className="alumno-list">
+              {lista.map((a, i) => (
+                <div className="alumno-row" key={a.id}>
+                  <span className="alumno-num">{i + 1}</span>
+                  <span className="alumno-name">{a.nombre}</span>
+                  <span className={`status-badge ${a.presente ? "present" : "absent"}`}>{a.presente ? "Presente" : "Ausente"}</span>
+                  <label className="toggle" style={{ marginLeft: 12 }}>
+                    <input type="checkbox" checked={a.presente} onChange={() => toggle(a.id)} />
+                    <span className="toggle-track" />
+                    <span className="toggle-thumb" />
+                  </label>
+                </div>
+              ))}
+            </div>
+            <div className="save-row">
+              <button className="btn-ghost" onClick={onBack}>Cancelar</button>
+              <button className="btn-save" onClick={guardar} disabled={saving}>{saving ? "Guardando..." : "Guardar asistencia"}</button>
+            </div>
+          </>
+        }
+      </div>
+    </div>
+  );
+}
+
+// ─── NOTAS ────────────────────────────────────────────────────────────────────
+function Notas({ aula, user, onBack, onToast }) {
+  const [alumnos, setAlumnos] = useState([]);
+  const [alumno, setAlumno] = useState("");
+  const [nota, setNota] = useState("");
+  const [etiqueta, setEtiqueta] = useState("");
+  const [registros, setRegistros] = useState([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    supabase.from("alumnos").select("nombre").eq("aula_id", aula.id).order("nombre").then(({ data }) => setAlumnos((data || []).map(a => a.nombre)));
+    supabase.from("notas").select("*").eq("aula_id", aula.id).eq("docente_id", user.id).order("timestamp", { ascending: false }).limit(20).then(({ data }) => setRegistros(data || []));
+  }, [aula.id, user.id]);
+
+  const notaNum = parseFloat(nota);
+  const valida = alumno && nota && !isNaN(notaNum) && notaNum >= 0 && notaNum <= 10 && etiqueta;
+
+  const guardar = async () => {
+    if (!valida) return;
+    setSaving(true);
+    const { data } = await supabase.from("notas").insert({ docente_id: user.id, aula_id: aula.id, aula_nombre: aula.nombre, alumno_nombre: alumno, nota: notaNum, etiqueta, fecha: today() }).select();
+    setSaving(false);
+    setRegistros(r => [data[0], ...r]);
+    setAlumno(""); setNota(""); setEtiqueta("");
+    onToast(`✓ Nota ${notaNum} guardada para ${alumno}`);
+  };
+
+  return (
+    <div className="main">
+      <div className="breadcrumb">
+        <span className="breadcrumb-link" onClick={onBack}>Mis Aulas</span>
+        <IconChevron /><span>{aula.nombre}</span><IconChevron /><span>Notas</span>
+      </div>
+      <div className="page-header"><h1>Registrar Nota</h1><p>{aula.nombre} · {aula.materia}</p></div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" }}>
+        <div className="panel">
+          <div className="panel-header">
+            <span className="panel-title">Nueva nota</span>
+            <span className="panel-date"><IconPen />{today()}</span>
+          </div>
+          <div className="nota-form">
+            <div>
+              <div className="field"><label>Alumno</label></div>
+              <select className="nota-select" value={alumno} onChange={e => setAlumno(e.target.value)}>
+                <option value="">Seleccioná un alumno…</option>
+                {alumnos.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+            <div className="nota-row">
+              <div>
+                <div className="field"><label>Nota (0–10)</label></div>
+                <input className="nota-input" type="number" min="0" max="10" step="0.1" placeholder="8.5" value={nota} onChange={e => setNota(e.target.value)} />
+              </div>
+              <div>
+                <div className="field"><label>Etiqueta</label></div>
+                <input className="nota-input" type="text" placeholder="ej: Examen parcial 1" value={etiqueta} onChange={e => setEtiqueta(e.target.value)} />
+              </div>
+            </div>
+            {nota && !isNaN(notaNum) && (
+              <div className="nota-preview">
+                <div>
+                  <div className="nota-preview-label">{alumno || "—"}</div>
+                  <div className="nota-preview-sub">{etiqueta || "Sin etiqueta"}</div>
+                </div>
+                <div className="nota-preview-val">{notaNum}</div>
+              </div>
+            )}
+            <div className="save-row">
+              <button className="btn-ghost" onClick={onBack}>Cancelar</button>
+              <button className="btn-save" onClick={guardar} disabled={!valida || saving}
+                style={{ opacity: valida ? 1 : .4, background: "#b7860b" }}>
+                {saving ? "Guardando..." : "Guardar nota"}
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="panel">
+          <div className="registros-title">Últimas notas</div>
+          <div className="registro-list">
+            {registros.length === 0
+              ? <div className="empty-state">Sin notas registradas aún.</div>
+              : registros.map(r => (
+                <div className="registro-item" key={r.id}>
+                  <span className="ri-date">{r.fecha}</span>
+                  <span className="ri-name">{r.alumno_nombre}</span>
+                  <span className="ri-val">{r.nota}</span>
+                  <span className="ri-label">{r.etiqueta}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── RESUMEN ──────────────────────────────────────────────────────────────────
+function Resumen({ aula, user, onBack }) {
+  const [datosAlumno, setDatosAlumno] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtro, setFiltro] = useState("todos");
+  const [expandido, setExpandido] = useState(null);
+
+  useEffect(() => {
+    const cargar = async () => {
+      const { data: alumnosData } = await supabase.from("alumnos").select("nombre").eq("aula_id", aula.id).order("nombre");
+      const { data: asistData } = await supabase.from("asistencia").select("alumno_nombre,fecha,presente").eq("aula_id", aula.id).eq("docente_id", user.id);
+      const { data: notasData } = await supabase.from("notas").select("*").eq("aula_id", aula.id).eq("docente_id", user.id);
+      const alumnos = (alumnosData || []).map(a => a.nombre);
+      setDatosAlumno(alumnos.map(nombre => {
+        const asistDias = (asistData || []).filter(r => r.alumno_nombre === nombre).map(r => ({ fecha: r.fecha, presente: r.presente }));
+        const totalDias = asistDias.length;
+        const diasPresente = asistDias.filter(d => d.presente).length;
+        const pctAsist = totalDias > 0 ? Math.round((diasPresente / totalDias) * 100) : null;
+        const notasAlumno = (notasData || []).filter(n => n.alumno_nombre === nombre);
+        const promedio = notasAlumno.length > 0 ? Math.round((notasAlumno.reduce((s, n) => s + parseFloat(n.nota), 0) / notasAlumno.length) * 10) / 10 : null;
+        return { nombre, asistDias, totalDias, diasPresente, pctAsist, notasAlumno, promedio };
+      }));
+      setLoading(false);
+    };
+    cargar();
+  }, [aula.id, user.id]);
+
+  const colorNota = (n) => n >= 8 ? "alta" : n >= 6 ? "media" : "baja";
+  const colorBar = (n) => n >= 8 ? "var(--accent)" : n >= 6 ? "var(--gold)" : "var(--warn)";
+  const initials = (nombre) => nombre.split(",")[0].trim().split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+
+  const conNotas = datosAlumno.filter(a => a.promedio !== null);
+  const promedioGlobal = conNotas.length > 0 ? Math.round((conNotas.reduce((s, a) => s + a.promedio, 0) / conNotas.length) * 10) / 10 : null;
+  const enRiesgo = datosAlumno.filter(a => (a.pctAsist !== null && a.pctAsist < 75) || (a.promedio !== null && a.promedio < 6)).length;
+  const destacados = datosAlumno.filter(a => a.promedio !== null && a.promedio >= 8).length;
+
+  const filtrados = datosAlumno
+    .filter(a => a.nombre.toLowerCase().includes(busqueda.toLowerCase()))
+    .filter(a => {
+      if (filtro === "riesgo") return (a.pctAsist !== null && a.pctAsist < 75) || (a.promedio !== null && a.promedio < 6);
+      if (filtro === "destacados") return a.promedio !== null && a.promedio >= 8;
+      return true;
+    });
+
+  const avatarColors = [["#e8f4f8", "#2d6a4f"], ["#fef9e7", "#b7860b"], ["#fde8ea", "#e63946"], ["#f0f0ff", "#5c5cb8"], ["#f0faf4", "#2d6a4f"]];
+
+  if (loading) return <div className="main"><div className="empty-state"><IconLoader /> Cargando resumen...</div></div>;
+
+  return (
+    <div className="main">
+      <div className="breadcrumb">
+        <span className="breadcrumb-link" onClick={onBack}>Mis Aulas</span>
+        <IconChevron /><span>{aula.nombre}</span><IconChevron /><span>Resumen</span>
+      </div>
+      <div className="page-header"><h1>Resumen del Curso</h1><p>{aula.nombre} · {aula.materia}</p></div>
+      <div className="resumen-stats-top">
+        {[["Alumnos", datosAlumno.length, ""], ["Promedio global", promedioGlobal ?? "—", promedioGlobal ? colorNota(promedioGlobal) : ""], ["En riesgo", enRiesgo, enRiesgo > 0 ? "red" : ""], ["Destacados", destacados, destacados > 0 ? "gold" : ""]].map(([l, v, c]) => (
+          <div className="rst" key={l}><div className="rst-lbl">{l}</div><div className={`rst-val ${c}`}>{v}</div></div>
+        ))}
+      </div>
+      <input className="resumen-search" type="text" placeholder="Buscar alumno…" value={busqueda} onChange={e => setBusqueda(e.target.value)} />
+      <div className="resumen-tabs">
+        {[["todos", "Todos"], ["riesgo", `En riesgo (${enRiesgo})`], ["destacados", `Destacados (${destacados})`]].map(([v, l]) => (
+          <button key={v} className={`rtab ${filtro === v ? "active" : ""}`} onClick={() => setFiltro(v)}>{l}</button>
+        ))}
+      </div>
+      <div className="resumen-grid">
+        {filtrados.length === 0 && <div className="empty-state">No se encontraron alumnos.</div>}
+        {filtrados.map((a, i) => {
+          const [bg, fg] = avatarColors[i % avatarColors.length];
+          const abierto = expandido === a.nombre;
+          return (
+            <div className="alumno-card" key={a.nombre}>
+              <div className="alumno-card-header" onClick={() => setExpandido(abierto ? null : a.nombre)}>
+                <div className="alumno-avatar" style={{ background: bg, color: fg }}>{initials(a.nombre)}</div>
+                <div style={{ flex: 1 }}>
+                  <div className="alumno-card-name">{a.nombre}</div>
+                  {((a.pctAsist !== null && a.pctAsist < 75) || (a.promedio !== null && a.promedio < 6)) && <div style={{ fontSize: 11, color: "var(--warn)", marginTop: 2 }}>⚠ Requiere atención</div>}
+                </div>
+                <div className="alumno-card-stats">
+                  {[["Asist.", a.pctAsist !== null ? `${a.pctAsist}%` : "—", a.pctAsist !== null ? (a.pctAsist >= 75 ? "green" : "red") : ""], ["Prom.", a.promedio ?? "—", a.promedio !== null ? colorNota(a.promedio) : ""], ["Notas", a.notasAlumno.length, ""]].map(([lbl, val, cls], idx, arr) => (
+                    <><div className="astat" key={lbl}><span className={`astat-val ${cls}`}>{val}</span><span className="astat-lbl">{lbl}</span></div>{idx < arr.length - 1 && <div className="astat-sep" />}</>
+                  ))}
+                </div>
+                <div className={`alumno-card-expand ${abierto ? "open" : ""}`}><IconChevron /></div>
+              </div>
+              {abierto && (
+                <div className="alumno-card-body">
+                  <div className="alumno-body-grid">
+                    <div>
+                      <div className="alumno-section-title">Asistencia — {a.diasPresente}/{a.totalDias} días</div>
+                      {a.totalDias === 0 ? <div style={{ fontSize: 13, color: "var(--ink3)" }}>Sin registros aún</div> : (
+                        <>
+                          <div className="asist-calendar">
+                            {a.asistDias.map((d, idx) => <div key={idx} className={`asist-dot ${d.presente ? "p" : "a"}`} title={`${d.fecha}`}>{d.presente ? "P" : "A"}</div>)}
+                          </div>
+                          <div className="promedio-bar" style={{ marginTop: 10 }}>
+                            <div className="bar-track"><div className="bar-fill" style={{ width: `${a.pctAsist}%`, background: a.pctAsist >= 75 ? "var(--accent)" : "var(--warn)" }} /></div>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: a.pctAsist >= 75 ? "var(--accent)" : "var(--warn)" }}>{a.pctAsist}%</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <div>
+                      <div className="alumno-section-title">Notas — {a.notasAlumno.length} registradas</div>
+                      {a.notasAlumno.length === 0 ? <div style={{ fontSize: 13, color: "var(--ink3)" }}>Sin notas aún</div> : (
+                        <>
+                          {a.notasAlumno.map(n => <div className="nota-pill" key={n.id}><span className="nota-pill-label">{n.etiqueta}</span><span className={`nota-pill-val ${colorNota(n.nota)}`}>{n.nota}</span></div>)}
+                          {a.notasAlumno.length > 1 && <div className="promedio-bar" style={{ marginTop: 6 }}><span style={{ fontSize: 12, color: "var(--ink3)" }}>Promedio</span><div className="bar-track"><div className="bar-fill" style={{ width: `${(a.promedio / 10) * 100}%`, background: colorBar(a.promedio) }} /></div><span style={{ fontSize: 12, fontWeight: 700, color: colorBar(a.promedio) }}>{a.promedio}</span></div>}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── CONFIG ───────────────────────────────────────────────────────────────────
+function Config({ user, onBack }) {
+  const nombre = user.user_metadata?.nombre_completo || user.email;
+  return (
+    <div className="main">
+      <div className="breadcrumb"><span className="breadcrumb-link" onClick={onBack}>Mis Aulas</span><IconChevron /><span>Configuración</span></div>
+      <div className="page-header"><h1>Cuenta y Suscripción</h1><p>{user.email}</p></div>
+      <div className="sub-card">
+        <div className="sub-card-title">Panel Administrativo</div>
+        <div className="sub-card-sub">Parámetros internos del servicio</div>
+        <div className="sub-stat"><div className="sub-stat-label">Modo operativo</div><div className="sub-stat-val">Operando con el 1% del capital inicial de cuenta</div></div>
+        <div className="sub-stat"><div className="sub-stat-label">Riesgo máximo permitido</div><div className="sub-stat-val">1.8%</div></div>
+        <div className="sub-badge"><IconStar />Plan Activo</div>
+      </div>
+      <div className="panel">
+        <div className="panel-header"><span className="panel-title">Tu cuenta</span></div>
+        <div style={{ fontSize: 14, color: "var(--ink2)", lineHeight: 2 }}>
+          <div><strong>Nombre:</strong> {nombre}</div>
+          <div><strong>Email:</strong> {user.email}</div>
+          <div><strong>ID:</strong> <span style={{ fontSize: 12, color: "var(--ink3)" }}>{user.id}</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
+  const [screen, setScreen] = useState("dashboard");
+  const [aulaActual, setAulaActual] = useState(null);
+  const [toast, setToast] = useState("");
+
+  useEffect(() => {
+    // Verificar sesión activa al cargar
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoadingAuth(false);
+    });
+    // Escuchar cambios de sesión (login / logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2800); };
+  const logout = async () => { await supabase.auth.signOut(); setScreen("dashboard"); setAulaActual(null); };
+
+  // Necesitamos agregar la tabla aulas en Supabase también
+  // Esta función crea la tabla si no existe via RPC (ya la creamos en SQL editor)
+
+  if (loadingAuth) return (
+    <>
+      <style>{styles}</style>
+      <div className="loading-screen"><IconLoader /> Cargando...</div>
+    </>
+  );
+
+  if (!user) return (
+    <>
+      <style>{styles}</style>
+      <Login onLogin={setUser} />
+    </>
+  );
+
+  return (
+    <>
+      <style>{styles}</style>
+      <div className="app">
+        <Topbar user={user} onLogout={logout} onConfig={() => setScreen("config")} />
+        {screen === "dashboard" && <Dashboard user={user} onSelect={a => { setAulaActual(a); setScreen("aula"); }} />}
+        {screen === "aula" && aulaActual && <AulaView aula={aulaActual} user={user} onBack={() => setScreen("dashboard")} onAction={s => setScreen(s)} />}
+        {screen === "asistencia" && aulaActual && <Asistencia aula={aulaActual} user={user} onBack={() => setScreen("aula")} onToast={showToast} />}
+        {screen === "notas" && aulaActual && <Notas aula={aulaActual} user={user} onBack={() => setScreen("aula")} onToast={showToast} />}
+        {screen === "resumen" && aulaActual && <Resumen aula={aulaActual} user={user} onBack={() => setScreen("aula")} />}
+        {screen === "config" && <Config user={user} onBack={() => setScreen("dashboard")} />}
+        <Toast msg={toast} />
+      </div>
+    </>
+  );
+}
