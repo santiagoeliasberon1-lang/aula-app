@@ -438,7 +438,7 @@ function Dashboard({ user, onSelect }) {
     setLoading(false);
   };
 
-  useEffect(() => { cargarAulas(); }, []);
+  useEffect(() => { cargarAulas(); }, [cargarAulas]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const crearAula = async ({ nombre, materia }) => {
     await supabase.from("aulas").insert({ docente_id: user.id, nombre, materia });
@@ -677,7 +677,7 @@ function AulaView({ aula, user, onBack, onAction }) {
 
 // ─── ASISTENCIA ───────────────────────────────────────────────────────────────
 function Asistencia({ aula, user, onBack, onToast }) {
-  const [alumnos, setAlumnos] = useState([]);
+  const [, setAlumnos] = useState([]);
   const [lista, setLista] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
