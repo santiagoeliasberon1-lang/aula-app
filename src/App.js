@@ -18,6 +18,9 @@ const IconPen      = () => <Icon d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 
 const IconUpload   = () => <Icon d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" />;
 const IconPlus     = () => <Icon d="M12 5v14M5 12h14" />;
 const IconTrash    = () => <Icon d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" size={16} />;
+const IconEdit     = ({ size = 20 }) => <Icon d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" size={size} />;
+const IconTable    = ({ size = 20 }) => <Icon d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18" size={size} />;
+const IconDownload = ({ size = 20 }) => <Icon d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" size={size} />;
 const IconUsers    = ({ size = 20 }) => <Icon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" size={size} />;
 const IconLoader   = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -105,7 +108,7 @@ const styles = `
   .add-aula-text { font-size: 13px; color: var(--ink3); font-weight: 500; }
 
   /* AULA VIEW */
-  .aula-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+  .aula-actions { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
   .action-btn { background: #fff; border: 2px solid var(--paper3); border-radius: 16px; padding: 32px 24px; cursor: pointer; text-align: left; transition: all .2s; display: flex; flex-direction: column; gap: 10px; }
   .action-btn:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); }
   .action-btn.asistencia:hover { border-color: var(--accent); }
@@ -267,6 +270,28 @@ const styles = `
   .toast { position: fixed; bottom: 24px; right: 24px; background: var(--ink); color: #fff; padding: 13px 20px; border-radius: 10px; font-size: 14px; box-shadow: var(--shadow-lg); z-index: 1000; animation: slideUp .25s ease; }
   @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
+  /* PLANILLA */
+  .planilla-wrap { overflow-x: auto; border-radius: 12px; border: 1.5px solid var(--paper3); }
+  .planilla-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .planilla-table th { background: var(--ink); color: #fff; padding: 10px 14px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+  .planilla-table th:first-child { border-radius: 10px 0 0 0; }
+  .planilla-table th:last-child { border-radius: 0 10px 0 0; }
+  .planilla-table td { padding: 9px 14px; border-bottom: 1px solid var(--paper2); color: var(--ink); vertical-align: middle; }
+  .planilla-table tr:last-child td { border-bottom: none; }
+  .planilla-table tr:hover td { background: var(--paper); }
+  .planilla-table td.num { text-align: center; font-weight: 700; }
+  .planilla-table td.num.alta { color: var(--accent); }
+  .planilla-table td.num.media { color: #b7860b; }
+  .planilla-table td.num.baja { color: var(--warn); }
+  .planilla-table td.asist-cell { text-align: center; }
+  .obs-input { width: 100%; border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--ink); outline: none; padding: 2px 4px; border-radius: 4px; }
+  .obs-input:focus { background: var(--paper2); }
+  .planilla-actions { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+  .btn-excel { display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px; background: #217346; color: #fff; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .2s; }
+  .btn-excel:hover { background: #1a5c38; }
+  .edit-aula-btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; background: none; border: 1.5px solid var(--paper3); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; color: var(--ink3); cursor: pointer; transition: all .15s; margin-left: 8px; }
+  .edit-aula-btn:hover { border-color: var(--accent); color: var(--accent); }
+
   @media (max-width: 700px) {
     .aula-actions { grid-template-columns: 1fr; }
     .nota-row { grid-template-columns: 1fr; }
@@ -426,11 +451,57 @@ function NuevaAulaModal({ onClose, onCrear }) {
   );
 }
 
+// ─── MODAL EDITAR AULA ───────────────────────────────────────────────────────
+function EditarAulaModal({ aula, onClose, onGuardar }) {
+  const [nombre, setNombre] = useState(aula.nombre);
+  const [materia, setMateria] = useState(aula.materia);
+  const [loading, setLoading] = useState(false);
+
+  const guardar = async () => {
+    if (!nombre.trim() || !materia.trim()) return;
+    setLoading(true);
+    await supabase.from("aulas").update({ nombre: nombre.trim(), materia: materia.trim() }).eq("id", aula.id);
+    setLoading(false);
+    onGuardar({ ...aula, nombre: nombre.trim(), materia: materia.trim() });
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <span className="modal-title">Editar Aula</span>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <div className="modal-body">
+          <div className="nueva-aula-form">
+            <div className="field">
+              <label>Nombre del aula</label>
+              <input className="manual-input" style={{ width: "100%" }} type="text" value={nombre} onChange={e => setNombre(e.target.value)} onKeyDown={e => e.key === "Enter" && guardar()} />
+            </div>
+            <div className="field">
+              <label>Materia</label>
+              <input className="manual-input" style={{ width: "100%" }} type="text" value={materia} onChange={e => setMateria(e.target.value)} onKeyDown={e => e.key === "Enter" && guardar()} />
+            </div>
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn-ghost" onClick={onClose}>Cancelar</button>
+          <button className="btn-save" onClick={guardar} disabled={!nombre.trim() || !materia.trim() || loading}>
+            {loading ? "Guardando..." : "Guardar cambios"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── DASHBOARD ────────────────────────────────────────────────────────────────
 function Dashboard({ user, onSelect }) {
   const [aulas, setAulas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalNueva, setModalNueva] = useState(false);
+  const [aulaEditar, setAulaEditar] = useState(null);
 
   const cargarAulas = useCallback(async () => {
     const { data } = await supabase.from("aulas").select("*").eq("docente_id", user.id).order("created_at");
@@ -445,11 +516,16 @@ function Dashboard({ user, onSelect }) {
     cargarAulas();
   };
 
+  const actualizarAula = (aulaActualizada) => {
+    setAulas(prev => prev.map(a => a.id === aulaActualizada.id ? aulaActualizada : a));
+  };
+
   if (loading) return <div className="main"><div className="empty-state"><IconLoader /> Cargando aulas...</div></div>;
 
   return (
     <div className="main">
       {modalNueva && <NuevaAulaModal onClose={() => setModalNueva(false)} onCrear={crearAula} />}
+      {aulaEditar && <EditarAulaModal aula={aulaEditar} onClose={() => setAulaEditar(null)} onGuardar={actualizarAula} />}
       <div className="page-header">
         <h1>Mis Aulas</h1>
         <p>Seleccioná un aula para registrar asistencia o notas</p>
@@ -457,7 +533,12 @@ function Dashboard({ user, onSelect }) {
       <div className="aulas-grid">
         {aulas.map(a => (
           <div className="aula-card" key={a.id} onClick={() => onSelect(a)}>
-            <div className="aula-tag">{a.materia}</div>
+            <div className="aula-tag" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span>{a.materia}</span>
+              <button className="edit-aula-btn" onClick={e => { e.stopPropagation(); setAulaEditar(a); }}>
+                <IconEdit size={12} /> Editar
+              </button>
+            </div>
             <div className="aula-name">{a.nombre}</div>
             <div className="aula-meta">{a.total_alumnos || 0} alumnos</div>
             <div className="aula-chevron"><IconChevron /></div>
@@ -608,6 +689,130 @@ function GestionAlumnosModal({ aula, user, onClose, onGuardar }) {
   );
 }
 
+// ─── PLANILLA ────────────────────────────────────────────────────────────────
+function Planilla({ aula, user, onBack }) {
+  const [filas, setFilas] = useState([]);
+  const [etiquetas, setEtiquetas] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [obs, setObs] = useState({});
+
+  useEffect(() => {
+    const cargar = async () => {
+      const { data: alumnosData } = await supabase.from("alumnos").select("nombre").eq("aula_id", aula.id).order("nombre");
+      const { data: asistData } = await supabase.from("asistencia").select("alumno_nombre,presente").eq("aula_id", aula.id).eq("docente_id", user.id);
+      const { data: notasData } = await supabase.from("notas").select("*").eq("aula_id", aula.id).eq("docente_id", user.id);
+      const alumnos = (alumnosData || []).map(a => a.nombre);
+      const todasEtiquetas = [...new Set((notasData || []).map(n => n.etiqueta))].sort();
+      setEtiquetas(todasEtiquetas);
+      setFilas(alumnos.map(nombre => {
+        const notasAlumno = (notasData || []).filter(n => n.alumno_nombre === nombre);
+        const notasPorEtiqueta = {};
+        todasEtiquetas.forEach(et => {
+          const ns = notasAlumno.filter(n => n.etiqueta === et);
+          notasPorEtiqueta[et] = ns.length > 0 ? Math.round((ns.reduce((s, n) => s + parseFloat(n.nota), 0) / ns.length) * 10) / 10 : null;
+        });
+        const todasNotas = notasAlumno.map(n => parseFloat(n.nota));
+        const promedio = todasNotas.length > 0 ? Math.round((todasNotas.reduce((s, n) => s + n, 0) / todasNotas.length) * 10) / 10 : null;
+        const asistAlumno = (asistData || []).filter(r => r.alumno_nombre === nombre);
+        const totalDias = asistAlumno.length;
+        const presentes = asistAlumno.filter(d => d.presente).length;
+        const pctAsist = totalDias > 0 ? Math.round((presentes / totalDias) * 100) : null;
+        return { nombre, notasPorEtiqueta, promedio, pctAsist, totalDias, presentes };
+      }));
+      setLoading(false);
+    };
+    cargar();
+  }, [aula.id, user.id]);
+
+  const colorClase = (n) => n === null ? "" : n >= 8 ? "alta" : n >= 6 ? "media" : "baja";
+
+  const exportarExcel = () => {
+    const encabezados = ["Alumno", ...etiquetas, "Promedio", "Asistencia", "Observaciones"];
+    const rows = filas.map(f => [
+      f.nombre,
+      ...etiquetas.map(et => f.notasPorEtiqueta[et] ?? ""),
+      f.promedio ?? "",
+      f.pctAsist !== null ? `${f.pctAsist}% (${f.presentes}/${f.totalDias})` : "Sin datos",
+      obs[f.nombre] || ""
+    ]);
+    const csvContent = [encabezados, ...rows]
+      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("
+");
+    const BOM = "﻿";
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `planilla_${aula.nombre.replace(/\s/g, "_")}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (loading) return <div className="main"><div className="empty-state"><IconLoader /> Cargando planilla...</div></div>;
+
+  return (
+    <div className="main" style={{ maxWidth: "100%" }}>
+      <div className="breadcrumb">
+        <span className="breadcrumb-link" onClick={onBack}>Mis Aulas</span>
+        <IconChevron /><span>{aula.nombre}</span><IconChevron /><span>Planilla</span>
+      </div>
+      <div className="page-header"><h1>Planilla del Curso</h1><p>{aula.nombre} · {aula.materia}</p></div>
+      <div className="planilla-actions">
+        <button className="btn-excel" onClick={exportarExcel}>
+          <IconDownload size={16} /> Exportar a Excel (.csv)
+        </button>
+        <span style={{ fontSize: 13, color: "var(--ink3)" }}>Podés editar las observaciones directamente en la tabla</span>
+      </div>
+      {filas.length === 0
+        ? <div className="empty-state">No hay alumnos cargados en esta aula.</div>
+        : <div className="planilla-wrap">
+            <table className="planilla-table">
+              <thead>
+                <tr>
+                  <th>Alumno</th>
+                  {etiquetas.map(et => <th key={et}>{et}</th>)}
+                  <th>Promedio</th>
+                  <th>Asistencia</th>
+                  <th style={{ minWidth: 160 }}>Observaciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filas.map(f => (
+                  <tr key={f.nombre}>
+                    <td style={{ fontWeight: 500, whiteSpace: "nowrap" }}>{f.nombre}</td>
+                    {etiquetas.map(et => (
+                      <td key={et} className={`num ${colorClase(f.notasPorEtiqueta[et])}`}>
+                        {f.notasPorEtiqueta[et] ?? <span style={{ color: "var(--ink3)" }}>—</span>}
+                      </td>
+                    ))}
+                    <td className={`num ${colorClase(f.promedio)}`} style={{ fontWeight: 700 }}>
+                      {f.promedio ?? <span style={{ color: "var(--ink3)" }}>—</span>}
+                    </td>
+                    <td className="asist-cell">
+                      {f.pctAsist !== null
+                        ? <span style={{ fontWeight: 600, color: f.pctAsist >= 75 ? "var(--accent)" : "var(--warn)" }}>{f.pctAsist}%</span>
+                        : <span style={{ color: "var(--ink3)" }}>—</span>}
+                    </td>
+                    <td>
+                      <input
+                        className="obs-input"
+                        type="text"
+                        placeholder="Agregar observación..."
+                        value={obs[f.nombre] || ""}
+                        onChange={e => setObs(prev => ({ ...prev, [f.nombre]: e.target.value }))}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+      }
+    </div>
+  );
+}
+
 // ─── AULA VIEW ────────────────────────────────────────────────────────────────
 function AulaView({ aula, user, onBack, onAction }) {
   const [alumnos, setAlumnos] = useState([]);
@@ -669,6 +874,14 @@ function AulaView({ aula, user, onBack, onAction }) {
           <div className="action-btn-title">Resumen del Curso</div>
           <div className="action-btn-desc">Vista consolidada por alumno: asistencia y notas.</div>
           <div style={{ fontSize: 12, color: "var(--ink3)", marginTop: 4 }}>{alumnos.length} alumnos</div>
+        </button>
+        <button className="action-btn"
+          onMouseEnter={e => e.currentTarget.style.borderColor = "#217346"}
+          onMouseLeave={e => e.currentTarget.style.borderColor = "var(--paper3)"}
+          onClick={() => onAction("planilla")}>
+          <div className="action-btn-icon" style={{ background: "#e8f5e9", color: "#217346" }}><IconTable /></div>
+          <div className="action-btn-title">Planilla</div>
+          <div className="action-btn-desc">Tabla completa con notas, promedio y asistencia. Exportable a Excel.</div>
         </button>
       </div>
     </div>
@@ -1055,6 +1268,7 @@ export default function App() {
         {screen === "asistencia" && aulaActual && <Asistencia aula={aulaActual} user={user} onBack={() => setScreen("aula")} onToast={showToast} />}
         {screen === "notas" && aulaActual && <Notas aula={aulaActual} user={user} onBack={() => setScreen("aula")} onToast={showToast} />}
         {screen === "resumen" && aulaActual && <Resumen aula={aulaActual} user={user} onBack={() => setScreen("aula")} />}
+        {screen === "planilla" && aulaActual && <Planilla aula={aulaActual} user={user} onBack={() => setScreen("aula")} />}
         {screen === "config" && <Config user={user} onBack={() => setScreen("dashboard")} />}
         <Toast msg={toast} />
       </div>
