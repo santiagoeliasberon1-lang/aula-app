@@ -292,6 +292,31 @@ const styles = `
   .edit-aula-btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; background: none; border: 1.5px solid var(--paper3); border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500; color: var(--ink3); cursor: pointer; transition: all .15s; margin-left: 8px; }
   .edit-aula-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+  /* ADMIN */
+  .admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+  .admin-stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .admin-stat { background: #fff; border: 1.5px solid var(--paper3); border-radius: 12px; padding: 16px 18px; }
+  .admin-stat-lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--ink3); margin-bottom: 4px; }
+  .admin-stat-val { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--ink); }
+  .user-list { display: flex; flex-direction: column; gap: 10px; }
+  .user-card { background: #fff; border: 1.5px solid var(--paper3); border-radius: 14px; padding: 18px 22px; display: flex; align-items: center; gap: 16px; transition: box-shadow .2s; }
+  .user-card:hover { box-shadow: var(--shadow); }
+  .user-card.inactivo { opacity: .55; }
+  .user-avatar-admin { width: 40px; height: 40px; border-radius: 50%; background: var(--accent-light); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; color: var(--accent); flex-shrink: 0; }
+  .user-avatar-admin.inactivo { background: var(--paper3); color: var(--ink3); }
+  .user-info { flex: 1; cursor: pointer; }
+  .user-name { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 2px; }
+  .user-email { font-size: 12px; color: var(--ink3); }
+  .user-meta { font-size: 12px; color: var(--ink3); margin-top: 3px; }
+  .user-badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; margin-left: 8px; }
+  .user-badge.activo { background: var(--accent-light); color: var(--accent); }
+  .user-badge.inactivo { background: var(--warn-light); color: var(--warn); }
+  .toggle-activo { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .toggle-activo-label { font-size: 12px; color: var(--ink3); }
+  .admin-nav-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: var(--ink); color: #fff; border: none; border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .user-aulas { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--paper2); }
+  .user-aula-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 13px; color: var(--ink2); }
+
   @media (max-width: 700px) {
     .aula-actions { grid-template-columns: 1fr; }
     .nota-row { grid-template-columns: 1fr; }
@@ -323,6 +348,15 @@ function Login({ onLogin }) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
     setLoading(false);
     if (error) { setErr("Correo o contraseña incorrectos."); return; }
+    if (data.user.id !== "088cf6c0-7e53-4999-ae1f-7f0c9222edbf") {
+      const { data: perfil } = await supabase.from("perfiles").select("activo").eq("id", data.user.id).single();
+      if (perfil && !perfil.activo) {
+        await supabase.auth.signOut();
+        setLoading(false);
+        setErr("Tu cuenta está suspendida. Contactá al administrador.");
+        return;
+      }
+    }
     onLogin(data.user);
   };
 
@@ -390,7 +424,7 @@ function Login({ onLogin }) {
 }
 
 // ─── TOPBAR ───────────────────────────────────────────────────────────────────
-function Topbar({ user, onLogout, onConfig }) {
+function Topbar({ user, onLogout, onConfig, onAdmin }) {
   const nombre = user.user_metadata?.nombre_completo || user.email;
   const initials = nombre.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
   return (
@@ -401,6 +435,11 @@ function Topbar({ user, onLogout, onConfig }) {
         <span style={{ fontSize: 13, color: "var(--ink3)" }}>{nombre}</span>
         <div className="topbar-avatar">{initials}</div>
       </div>
+      {onAdmin && (
+        <button className="btn-icon" title="Panel Admin" onClick={onAdmin} style={{ color: "var(--accent)", fontWeight: 700 }}>
+          <IconUsers size={18} />
+        </button>
+      )}
       <button className="btn-icon" title="Configuración" onClick={onConfig}><IconCog /></button>
       <button className="btn-icon" title="Cerrar sesión" onClick={onLogout}><IconLogout /></button>
     </div>
@@ -1216,32 +1255,145 @@ function Config({ user, onBack }) {
   );
 }
 
+
+// ─── ADMIN ────────────────────────────────────────────────────────────────────
+const ADMIN_ID = "088cf6c0-7e53-4999-ae1f-7f0c9222edbf";
+
+function Admin({ user, onBack }) {
+  const [perfiles, setPerfiles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [aulasPorUser, setAulasPorUser] = useState({});
+  const [expandido, setExpandido] = useState(null);
+  const [toastMsg, setToastMsg] = useState("");
+
+  const showToast = (msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(""), 2500); };
+
+  const cargar = useCallback(async () => {
+    const { data: perfilesData } = await supabase.from("perfiles").select("*").order("created_at");
+    setPerfiles(perfilesData || []);
+    const { data: aulasData } = await supabase.from("aulas").select("*").order("created_at");
+    const mapa = {};
+    (aulasData || []).forEach(a => {
+      if (!mapa[a.docente_id]) mapa[a.docente_id] = [];
+      mapa[a.docente_id].push(a);
+    });
+    setAulasPorUser(mapa);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { cargar(); }, [cargar]);
+
+  const toggleActivo = async (perfil) => {
+    const nuevoEstado = !perfil.activo;
+    await supabase.from("perfiles").update({ activo: nuevoEstado }).eq("id", perfil.id);
+    setPerfiles(prev => prev.map(p => p.id === perfil.id ? { ...p, activo: nuevoEstado } : p));
+    showToast(nuevoEstado ? "Cuenta habilitada" : "Cuenta deshabilitada");
+  };
+
+  const docentes = perfiles.filter(p => p.id !== ADMIN_ID);
+  const totalActivos = docentes.filter(p => p.activo).length;
+  const totalAulas = Object.values(aulasPorUser).flat().length;
+
+  if (loading) return <div className="main"><div className="empty-state"><IconLoader /> Cargando panel...</div></div>;
+
+  return (
+    <div className="main">
+      {toastMsg && <div className="toast">{toastMsg}</div>}
+      <div className="admin-header">
+        <div className="page-header" style={{ marginBottom: 0 }}>
+          <h1>Panel de Administración</h1>
+          <p>Gestioná las cuentas de las docentes</p>
+        </div>
+        <button className="admin-nav-btn" onClick={onBack}>← Volver</button>
+      </div>
+      <div className="admin-stats">
+        {[
+          ["Docentes", docentes.length, "var(--ink)"],
+          ["Activas", totalActivos, "var(--accent)"],
+          ["Inactivas", docentes.length - totalActivos, docentes.length - totalActivos > 0 ? "var(--warn)" : "var(--ink)"],
+          ["Aulas totales", totalAulas, "var(--ink)"]
+        ].map(([l, v, c]) => (
+          <div className="admin-stat" key={l}>
+            <div className="admin-stat-lbl">{l}</div>
+            <div className="admin-stat-val" style={{ color: c }}>{v}</div>
+          </div>
+        ))}
+      </div>
+      <div className="user-list">
+        {docentes.length === 0 && <div className="empty-state">No hay docentes registradas todavía.</div>}
+        {docentes.map(p => {
+          const aulas = aulasPorUser[p.id] || [];
+          const abierto = expandido === p.id;
+          const iniciales = (p.nombre || p.email || "?").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+          return (
+            <div className={`user-card ${p.activo ? "" : "inactivo"}`} key={p.id}>
+              <div className={`user-avatar-admin ${p.activo ? "" : "inactivo"}`}>{iniciales}</div>
+              <div className="user-info" onClick={() => setExpandido(abierto ? null : p.id)}>
+                <div className="user-name">
+                  {p.nombre || "Sin nombre"}
+                  <span className={`user-badge ${p.activo ? "activo" : "inactivo"}`}>{p.activo ? "Activa" : "Inactiva"}</span>
+                </div>
+                <div className="user-email">{p.email}</div>
+                <div className="user-meta">{aulas.length} aula{aulas.length !== 1 ? "s" : ""} · Desde {new Date(p.created_at).toLocaleDateString("es-AR")}</div>
+                {abierto && aulas.length > 0 && (
+                  <div className="user-aulas">
+                    {aulas.map(a => (
+                      <div className="user-aula-item" key={a.id}>
+                        <span>📚 {a.nombre} — {a.materia}</span>
+                        <span style={{ color: "var(--ink3)" }}>{a.total_alumnos || 0} alumnos</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {abierto && aulas.length === 0 && (
+                  <div className="user-aulas"><div style={{ fontSize: 13, color: "var(--ink3)", paddingTop: 8 }}>Sin aulas creadas aún.</div></div>
+                )}
+              </div>
+              <div className="toggle-activo">
+                <span className="toggle-activo-label">{p.activo ? "Habilitada" : "Bloqueada"}</span>
+                <label className="toggle">
+                  <input type="checkbox" checked={p.activo} onChange={() => toggleActivo(p)} />
+                  <span className="toggle-track" />
+                  <span className="toggle-thumb" />
+                </label>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── APP ──────────────────────────────────────────────────────────────────────
 export default function App() {
   const [user, setUser] = useState(null);
   const [loadingAuth, setLoadingAuth] = useState(true);
+  const [bloqueado, setBloqueado] = useState(false);
   const [screen, setScreen] = useState("dashboard");
   const [aulaActual, setAulaActual] = useState(null);
   const [toast, setToast] = useState("");
 
   useEffect(() => {
-    // Verificar sesión activa al cargar
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u && u.id !== "088cf6c0-7e53-4999-ae1f-7f0c9222edbf") {
+        const { data: perfil } = await supabase.from("perfiles").select("activo").eq("id", u.id).single();
+        if (perfil && !perfil.activo) setBloqueado(true);
+      }
       setLoadingAuth(false);
     });
-    // Escuchar cambios de sesión (login / logout)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setBloqueado(false);
     });
     return () => subscription.unsubscribe();
   }, []);
 
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(""), 2800); };
-  const logout = async () => { await supabase.auth.signOut(); setScreen("dashboard"); setAulaActual(null); };
-
-  // Necesitamos agregar la tabla aulas en Supabase también
-  // Esta función crea la tabla si no existe via RPC (ya la creamos en SQL editor)
+  const logout = async () => { await supabase.auth.signOut(); setScreen("dashboard"); setAulaActual(null); setBloqueado(false); };
+  const isAdmin = user?.id === "088cf6c0-7e53-4999-ae1f-7f0c9222edbf";
 
   if (loadingAuth) return (
     <>
@@ -1257,11 +1409,30 @@ export default function App() {
     </>
   );
 
+  if (bloqueado) return (
+    <>
+      <style>{styles}</style>
+      <div className="login-wrap">
+        <div className="login-bg" />
+        <div className="login-card" style={{ textAlign: "center" }}>
+          <div className="login-logo" style={{ justifyContent: "center" }}>
+            <div className="login-logo-mark">A</div>
+            <span className="login-logo-text">Aula</span>
+          </div>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+          <h2 style={{ fontFamily: "'DM Serif Display', serif", marginBottom: 8 }}>Cuenta suspendida</h2>
+          <p style={{ color: "var(--ink3)", fontSize: 14, marginBottom: 24 }}>Tu cuenta está temporalmente inactiva. Contactá al administrador para regularizar tu situación.</p>
+          <button className="btn-primary" onClick={logout}>Cerrar sesión</button>
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <>
       <style>{styles}</style>
       <div className="app">
-        <Topbar user={user} onLogout={logout} onConfig={() => setScreen("config")} />
+        <Topbar user={user} onLogout={logout} onConfig={() => setScreen("config")} onAdmin={isAdmin ? () => setScreen("admin") : null} />
         {screen === "dashboard" && <Dashboard user={user} onSelect={a => { setAulaActual(a); setScreen("aula"); }} />}
         {screen === "aula" && aulaActual && <AulaView aula={aulaActual} user={user} onBack={() => setScreen("dashboard")} onAction={s => setScreen(s)} />}
         {screen === "asistencia" && aulaActual && <Asistencia aula={aulaActual} user={user} onBack={() => setScreen("aula")} onToast={showToast} />}
@@ -1269,6 +1440,7 @@ export default function App() {
         {screen === "resumen" && aulaActual && <Resumen aula={aulaActual} user={user} onBack={() => setScreen("aula")} />}
         {screen === "planilla" && aulaActual && <Planilla aula={aulaActual} user={user} onBack={() => setScreen("aula")} />}
         {screen === "config" && <Config user={user} onBack={() => setScreen("dashboard")} />}
+        {screen === "admin" && isAdmin && <Admin user={user} onBack={() => setScreen("dashboard")} />}
         <Toast msg={toast} />
       </div>
     </>
