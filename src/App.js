@@ -1241,23 +1241,63 @@ function Resumen({ aula, user, onBack }) {
 // ─── CONFIG ───────────────────────────────────────────────────────────────────
 function Config({ user, onBack }) {
   const nombre = user.user_metadata?.nombre_completo || user.email;
+  const [cambiandoPass, setCambiandoPass] = useState(false);
+  const [passMsg, setPassMsg] = useState("");
+  const [passErr, setPassErr] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const enviarCambioPass = async () => {
+    setLoading(true); setPassErr(""); setPassMsg("");
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+      redirectTo: window.location.origin
+    });
+    setLoading(false);
+    if (error) { setPassErr("No se pudo enviar el correo. Intentá de nuevo."); return; }
+    setPassMsg("Te enviamos un correo con el link para cambiar tu contraseña.");
+    setCambiandoPass(false);
+  };
+
   return (
     <div className="main">
-      <div className="breadcrumb"><span className="breadcrumb-link" onClick={onBack}>Mis Aulas</span><IconChevron /><span>Configuración</span></div>
-      <div className="page-header"><h1>Cuenta y Suscripción</h1><p>{user.email}</p></div>
-      <div className="sub-card">
-        <div className="sub-card-title">Panel Administrativo</div>
-        <div className="sub-card-sub">Parámetros internos del servicio</div>
-        <div className="sub-stat"><div className="sub-stat-label">Modo operativo</div><div className="sub-stat-val">Operando con el 1% del capital inicial de cuenta</div></div>
-        <div className="sub-stat"><div className="sub-stat-label">Riesgo máximo permitido</div><div className="sub-stat-val">1.8%</div></div>
-        <div className="sub-badge"><IconStar />Plan Activo</div>
+      <div className="breadcrumb"><span className="breadcrumb-link" onClick={onBack}>Mis Aulas</span><IconChevron /><span>Mi cuenta</span></div>
+      <div className="page-header"><h1>Mi cuenta</h1><p>Configuración y datos personales</p></div>
+
+      <div className="panel" style={{ marginBottom: 16 }}>
+        <div className="panel-header"><span className="panel-title">Datos de la cuenta</span></div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: "var(--accent-light)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, fontWeight: 700, color: "var(--accent)", flexShrink: 0 }}>
+              {nombre.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()}
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: "var(--ink)" }}>{nombre}</div>
+              <div style={{ fontSize: 13, color: "var(--ink3)" }}>{user.email}</div>
+            </div>
+          </div>
+        </div>
       </div>
+
+      <div className="panel" style={{ marginBottom: 16 }}>
+        <div className="panel-header"><span className="panel-title">Contraseña</span></div>
+        {passMsg && <div className="login-ok" style={{ marginBottom: 14 }}>{passMsg}</div>}
+        {passErr && <div className="login-error" style={{ marginBottom: 14 }}>{passErr}</div>}
+        {!cambiandoPass
+          ? <button className="btn-ghost" onClick={() => setCambiandoPass(true)}>Cambiar contraseña</button>
+          : <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <p style={{ fontSize: 13, color: "var(--ink3)" }}>Te enviaremos un correo a <strong>{user.email}</strong> con un link para cambiar tu contraseña.</p>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button className="btn-save" onClick={enviarCambioPass} disabled={loading}>{loading ? "Enviando..." : "Enviar correo"}</button>
+                <button className="btn-ghost" onClick={() => setCambiandoPass(false)}>Cancelar</button>
+              </div>
+            </div>
+        }
+      </div>
+
       <div className="panel">
-        <div className="panel-header"><span className="panel-title">Tu cuenta</span></div>
-        <div style={{ fontSize: 14, color: "var(--ink2)", lineHeight: 2 }}>
-          <div><strong>Nombre:</strong> {nombre}</div>
-          <div><strong>Email:</strong> {user.email}</div>
-          <div><strong>ID:</strong> <span style={{ fontSize: 12, color: "var(--ink3)" }}>{user.id}</span></div>
+        <div className="panel-header"><span className="panel-title">Información</span></div>
+        <div style={{ fontSize: 13, color: "var(--ink3)", lineHeight: 2 }}>
+          <div>Versión <strong>1.0.0</strong></div>
+          <div>Desarrollado con ❤️ para docentes</div>
         </div>
       </div>
     </div>
