@@ -364,13 +364,22 @@ function Login({ onLogin }) {
     if (!email || !pass || !nombre) { setErr("Completá todos los campos."); return; }
     if (pass.length < 6) { setErr("La contraseña debe tener al menos 6 caracteres."); return; }
     setLoading(true); setErr("");
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email, password: pass,
       options: { data: { nombre_completo: nombre } }
     });
+    if (error) { setLoading(false); setErr(error.message); return; }
+    // Crear perfil manualmente
+    if (data?.user) {
+      await supabase.from("perfiles").insert({
+        id: data.user.id,
+        email: email,
+        nombre: nombre,
+        activo: true
+      });
+    }
     setLoading(false);
-    if (error) { setErr(error.message); return; }
-    setOk("¡Cuenta creada! Revisá tu correo para confirmar y luego iniciá sesión.");
+    setOk("¡Cuenta creada! Ya podés iniciar sesión.");
     setModo("login");
   };
 
