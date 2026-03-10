@@ -369,17 +369,17 @@ function Login({ onLogin }) {
       options: { data: { nombre_completo: nombre } }
     });
     if (error) { setLoading(false); setErr(error.message); return; }
-    // Crear perfil manualmente
+    // Crear perfil manualmente - inactivo hasta aprobación del admin
     if (data?.user) {
       await supabase.from("perfiles").insert({
         id: data.user.id,
         email: email,
         nombre: nombre,
-        activo: true
+        activo: false
       });
     }
     setLoading(false);
-    setOk("¡Cuenta creada! Ya podés iniciar sesión.");
+    setOk("¡Cuenta creada! En breve el administrador habilitará tu acceso.");
     setModo("login");
   };
 
