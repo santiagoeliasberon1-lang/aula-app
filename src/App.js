@@ -737,9 +737,8 @@ function Planilla({ aula, user, onBack }) {
     ]);
     const csvContent = [encabezados, ...rows]
       .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-      .join("
-");
-    const BOM = "﻿";
+      .join("\n");
+    const BOM = "\uFEFF";
     const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
