@@ -139,9 +139,20 @@ const styles = `
   .toggle input:checked + .toggle-track { background: var(--accent); }
   .toggle-thumb { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: #fff; border-radius: 50%; transition: transform .2s; pointer-events: none; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
   .toggle input:checked ~ .toggle-thumb { transform: translateX(20px); }
-  .status-badge { font-size: 11px; font-weight: 600; margin-left: 10px; padding: 2px 8px; border-radius: 20px; width: 68px; text-align: center; }
+  .status-badge { font-size: 11px; font-weight: 600; margin-left: 10px; padding: 2px 8px; border-radius: 20px; width: 76px; text-align: center; }
   .status-badge.present { background: var(--accent-light); color: var(--accent); }
   .status-badge.absent { background: var(--warn-light); color: var(--warn); }
+  .status-badge.tardanza { background: #fef9e7; color: #b7860b; }
+  .status-badge.retiro { background: #f0f0ff; color: #5c5cb8; }
+  .estado-btns { display: flex; gap: 4px; margin-left: 10px; }
+  .estado-btn { padding: 4px 10px; border-radius: 20px; border: 1.5px solid var(--paper3); background: #fff; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; transition: all .15s; }
+  .estado-btn.active-presente { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+  .estado-btn.active-tardanza { background: #fef9e7; border-color: #e9c46a; color: #b7860b; }
+  .estado-btn.active-retiro { background: #f0f0ff; border-color: #9999dd; color: #5c5cb8; }
+  .estado-btn.active-ausente { background: var(--warn-light); border-color: var(--warn); color: var(--warn); }
+  .fecha-selector { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .fecha-input { padding: 8px 14px; border: 1.5px solid var(--paper3); border-radius: 10px; font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--ink); background: var(--paper); outline: none; transition: border-color .2s; }
+  .fecha-input:focus { border-color: var(--accent); background: #fff; }
   .summary-bar { display: flex; gap: 16px; margin-bottom: 18px; }
   .summary-chip { font-size: 13px; padding: 6px 14px; border-radius: 20px; font-weight: 500; }
   .summary-chip.green { background: var(--accent-light); color: var(--accent); }
@@ -937,37 +948,51 @@ function AulaView({ aula, user, onBack, onAction }) {
 
 // ─── ASISTENCIA ───────────────────────────────────────────────────────────────
 function Asistencia({ aula, user, onBack, onToast }) {
-  const [, setAlumnos] = useState([]);
   const [lista, setLista] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [fecha, setFecha] = useState(today());
 
-  useEffect(() => {
-    const cargar = async () => {
-      const { data: alumnosData } = await supabase.from("alumnos").select("nombre").eq("aula_id", aula.id).order("nombre");
-      const nombres = (alumnosData || []).map(a => a.nombre);
-      setAlumnos(nombres);
-      const { data: asistHoy } = await supabase.from("asistencia").select("alumno_nombre,presente").eq("aula_id", aula.id).eq("docente_id", user.id).eq("fecha", today());
-      const mapaHoy = {};
-      (asistHoy || []).forEach(r => { mapaHoy[r.alumno_nombre] = r.presente; });
-      setLista(nombres.map((n, i) => ({ id: i, nombre: n, presente: mapaHoy[n] !== undefined ? mapaHoy[n] : true })));
-      setLoading(false);
-    };
-    cargar();
+  const cargar = useCallback(async (f) => {
+    setLoading(true);
+    const { data: alumnosData } = await supabase.from("alumnos").select("nombre").eq("aula_id", aula.id).order("nombre");
+    const nombres = (alumnosData || []).map(a => a.nombre);
+    const { data: asistFecha } = await supabase.from("asistencia").select("alumno_nombre,presente,estado").eq("aula_id", aula.id).eq("docente_id", user.id).eq("fecha", f);
+    const mapaFecha = {};
+    (asistFecha || []).forEach(r => { mapaFecha[r.alumno_nombre] = r.estado || (r.presente ? "presente" : "ausente"); });
+    setLista(nombres.map((n, i) => ({ id: i, nombre: n, estado: mapaFecha[n] || "presente" })));
+    setLoading(false);
   }, [aula.id, user.id]);
 
-  const toggle = (id) => setLista(l => l.map(a => a.id === id ? { ...a, presente: !a.presente } : a));
-  const presentes = lista.filter(a => a.presente).length;
+  useEffect(() => { cargar(fecha); }, [cargar, fecha]);
+
+  const setEstado = (id, estado) => setLista(l => l.map(a => a.id === id ? { ...a, estado } : a));
+
+  const presentes = lista.filter(a => a.estado === "presente").length;
+  const tardanzas = lista.filter(a => a.estado === "tardanza").length;
+  const retiros = lista.filter(a => a.estado === "retiro").length;
+  const ausentes = lista.filter(a => a.estado === "ausente").length;
 
   const guardar = async () => {
     setSaving(true);
-    await supabase.from("asistencia").delete().eq("aula_id", aula.id).eq("docente_id", user.id).eq("fecha", today());
+    await supabase.from("asistencia").delete().eq("aula_id", aula.id).eq("docente_id", user.id).eq("fecha", fecha);
     await supabase.from("asistencia").insert(
-      lista.map(a => ({ docente_id: user.id, aula_id: aula.id, aula_nombre: aula.nombre, alumno_nombre: a.nombre, fecha: today(), presente: a.presente }))
+      lista.map(a => ({
+        docente_id: user.id,
+        aula_id: aula.id,
+        aula_nombre: aula.nombre,
+        alumno_nombre: a.nombre,
+        fecha: fecha,
+        presente: a.estado === "presente" || a.estado === "tardanza",
+        estado: a.estado
+      }))
     );
     setSaving(false);
     onToast("✓ Asistencia guardada correctamente");
   };
+
+  const estadoLabel = { presente: "Presente", tardanza: "Tardanza", retiro: "Retiro", ausente: "Ausente" };
+  const estadoClass = { presente: "active-presente", tardanza: "active-tardanza", retiro: "active-retiro", ausente: "active-ausente" };
 
   if (loading) return <div className="main"><div className="empty-state"><IconLoader /> Cargando...</div></div>;
 
@@ -979,31 +1004,43 @@ function Asistencia({ aula, user, onBack, onToast }) {
       </div>
       <div className="page-header">
         <h1>Registrar Asistencia</h1>
-        <p style={{ textTransform: "capitalize" }}>{fmtDate(today())}</p>
+        <p style={{ textTransform: "capitalize" }}>{fmtDate(fecha)}</p>
       </div>
       <div className="panel">
         <div className="panel-header">
           <span className="panel-title">{aula.nombre} · {aula.materia}</span>
-          <span className="panel-date"><IconCalendar />{today()}</span>
+          <span className="panel-date"><IconCalendar />{fecha}</span>
+        </div>
+        <div className="fecha-selector">
+          <label style={{ fontSize: 13, fontWeight: 600, color: "var(--ink2)" }}>Fecha:</label>
+          <input className="fecha-input" type="date" value={fecha} max={today()} onChange={e => setFecha(e.target.value)} />
+          {fecha !== today() && <span style={{ fontSize: 12, color: "var(--gold)", fontWeight: 600 }}>📅 Editando fecha pasada</span>}
         </div>
         {lista.length === 0
           ? <div className="empty-state">No hay alumnos en esta aula. Cargalos primero desde "Gestionar alumnos".</div>
           : <>
             <div className="summary-bar">
               <span className="summary-chip green">✓ Presentes: {presentes}</span>
-              <span className="summary-chip red">✗ Ausentes: {lista.length - presentes}</span>
+              {tardanzas > 0 && <span className="summary-chip" style={{ background: "#fef9e7", color: "#b7860b" }}>⏰ Tardanzas: {tardanzas}</span>}
+              {retiros > 0 && <span className="summary-chip" style={{ background: "#f0f0ff", color: "#5c5cb8" }}>🚪 Retiros: {retiros}</span>}
+              <span className="summary-chip red">✗ Ausentes: {ausentes}</span>
             </div>
             <div className="alumno-list">
               {lista.map((a, i) => (
-                <div className="alumno-row" key={a.id}>
+                <div className="alumno-row" key={a.id} style={{ flexWrap: "wrap", gap: 6 }}>
                   <span className="alumno-num">{i + 1}</span>
                   <span className="alumno-name">{a.nombre}</span>
-                  <span className={`status-badge ${a.presente ? "present" : "absent"}`}>{a.presente ? "Presente" : "Ausente"}</span>
-                  <label className="toggle" style={{ marginLeft: 12 }}>
-                    <input type="checkbox" checked={a.presente} onChange={() => toggle(a.id)} />
-                    <span className="toggle-track" />
-                    <span className="toggle-thumb" />
-                  </label>
+                  <div className="estado-btns">
+                    {["presente", "tardanza", "retiro", "ausente"].map(est => (
+                      <button
+                        key={est}
+                        className={`estado-btn ${a.estado === est ? estadoClass[est] : ""}`}
+                        onClick={() => setEstado(a.id, est)}
+                      >
+                        {estadoLabel[est]}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
