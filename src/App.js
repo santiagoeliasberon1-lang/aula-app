@@ -667,8 +667,9 @@ function GestionAlumnosModal({ aula, user, onClose, onGuardar }) {
     const lista = tab === "csv" ? preview : listaManual;
     if (lista.length === 0) return;
     setLoading(true);
-    await supabase.from("alumnos").delete().eq("aula_id", aula.id).eq("docente_id", user.id);
-    await supabase.from("alumnos").insert(lista.map(nombre => ({ docente_id: user.id, aula_id: aula.id, nombre })));
+    const docenteId = aula.docente_id || user.id;
+    await supabase.from("alumnos").delete().eq("aula_id", aula.id);
+    await supabase.from("alumnos").insert(lista.map(nombre => ({ docente_id: docenteId, aula_id: aula.id, nombre })));
     await supabase.from("aulas").update({ total_alumnos: lista.length }).eq("id", aula.id);
     setLoading(false);
     onGuardar(lista);
@@ -1351,6 +1352,7 @@ function Admin({ user, onBack }) {
   const [aulasPorUser, setAulasPorUser] = useState({});
   const [expandido, setExpandido] = useState(null);
   const [toastMsg, setToastMsg] = useState("");
+  const [aulaGestion, setAulaGestion] = useState(null);
 
   const showToast = (msg) => { setToastMsg(msg); setTimeout(() => setToastMsg(""), 2500); };
 
@@ -1412,41 +1414,62 @@ function Admin({ user, onBack }) {
           const abierto = expandido === p.id;
           const iniciales = (p.nombre || p.email || "?").split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
           return (
-            <div className={`user-card ${p.activo ? "" : "inactivo"}`} key={p.id}>
-              <div className={`user-avatar-admin ${p.activo ? "" : "inactivo"}`}>{iniciales}</div>
-              <div className="user-info" onClick={() => setExpandido(abierto ? null : p.id)}>
-                <div className="user-name">
-                  {p.nombre || "Sin nombre"}
-                  <span className={`user-badge ${p.activo ? "activo" : "inactivo"}`}>{p.activo ? "Activa" : "Inactiva"}</span>
-                </div>
-                <div className="user-email">{p.email}</div>
-                <div className="user-meta">{aulas.length} aula{aulas.length !== 1 ? "s" : ""} · Desde {new Date(p.created_at).toLocaleDateString("es-AR")}</div>
-                {abierto && aulas.length > 0 && (
-                  <div className="user-aulas">
-                    {aulas.map(a => (
-                      <div className="user-aula-item" key={a.id}>
-                        <span>📚 {a.nombre} — {a.materia}</span>
-                        <span style={{ color: "var(--ink3)" }}>{a.total_alumnos || 0} alumnos</span>
-                      </div>
-                    ))}
+            <div className={`user-card ${p.activo ? "" : "inactivo"}`} key={p.id} style={{ flexDirection: "column", alignItems: "stretch" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div className={`user-avatar-admin ${p.activo ? "" : "inactivo"}`}>{iniciales}</div>
+                <div className="user-info" onClick={() => setExpandido(abierto ? null : p.id)}>
+                  <div className="user-name">
+                    {p.nombre || "Sin nombre"}
+                    <span className={`user-badge ${p.activo ? "activo" : "inactivo"}`}>{p.activo ? "Activa" : "Inactiva"}</span>
                   </div>
-                )}
-                {abierto && aulas.length === 0 && (
-                  <div className="user-aulas"><div style={{ fontSize: 13, color: "var(--ink3)", paddingTop: 8 }}>Sin aulas creadas aún.</div></div>
-                )}
+                  <div className="user-email">{p.email}</div>
+                  <div className="user-meta">{aulas.length} aula{aulas.length !== 1 ? "s" : ""} · Desde {new Date(p.created_at).toLocaleDateString("es-AR")}</div>
+                </div>
+                <div className="toggle-activo">
+                  <span className="toggle-activo-label">{p.activo ? "Habilitada" : "Bloqueada"}</span>
+                  <label className="toggle">
+                    <input type="checkbox" checked={p.activo} onChange={() => toggleActivo(p)} />
+                    <span className="toggle-track" />
+                    <span className="toggle-thumb" />
+                  </label>
+                </div>
               </div>
-              <div className="toggle-activo">
-                <span className="toggle-activo-label">{p.activo ? "Habilitada" : "Bloqueada"}</span>
-                <label className="toggle">
-                  <input type="checkbox" checked={p.activo} onChange={() => toggleActivo(p)} />
-                  <span className="toggle-track" />
-                  <span className="toggle-thumb" />
-                </label>
-              </div>
+              {abierto && (
+                <div className="user-aulas">
+                  {aulas.length === 0
+                    ? <div style={{ fontSize: 13, color: "var(--ink3)", paddingTop: 8 }}>Sin aulas creadas aún.</div>
+                    : aulas.map(a => (
+                      <div key={a.id} style={{ background: "var(--paper)", borderRadius: 10, padding: "10px 14px", marginTop: 8 }}>
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+                          <div>
+                            <span style={{ fontWeight: 600, color: "var(--ink)", fontSize: 14 }}>📚 {a.nombre}</span>
+                            <span style={{ color: "var(--ink3)", fontSize: 13 }}> — {a.materia}</span>
+                            <span style={{ color: "var(--ink3)", fontSize: 12, marginLeft: 8 }}>({a.total_alumnos || 0} alumnos)</span>
+                          </div>
+                          <button
+                            className="alumno-mgr-btn"
+                            onClick={() => setAulaGestion({ ...a, docente_nombre: p.nombre || p.email })}
+                          >
+                            <IconUsers size={14} /> Gestionar alumnos
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  }
+                </div>
+              )}
             </div>
           );
         })}
       </div>
+      {aulaGestion && (
+        <GestionAlumnosModal
+          aula={aulaGestion}
+          user={user}
+          onClose={() => setAulaGestion(null)}
+          onGuardar={() => { cargar(); setAulaGestion(null); }}
+        />
+      )}
     </div>
   );
 }
