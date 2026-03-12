@@ -392,7 +392,7 @@ function Login({ onLogin }) {
 
   const handle = modo === "login" ? handleLogin : handleRegistro;
 
-  if (registroExitoso) return (
+return (
     <div className="login-wrap">
       <div className="login-bg" />
       <div className="login-card" style={{ maxWidth: 460 }}>
@@ -428,9 +428,7 @@ function Login({ onLogin }) {
           </a>
         </div>
 
-        <button className="btn-ghost" style={{ width: "100%" }} onClick={() => { setRegistroExitoso(false); setModo("login"); }}>
-          Ya pagué, ir al inicio de sesión
-        </button>
+
       </div>
     </div>
   );
@@ -446,7 +444,7 @@ function Login({ onLogin }) {
         <h1 className="login-title">Bienvenido</h1>
         <p className="login-sub">Ingresá a tu panel docente</p>
         {err && <div className="login-error">{err}</div>}
-        {ok && <div className="login-ok">{ok}</div>}
+
         <div className="field">
           <label>Correo electrónico</label>
           <div className="field-inner">
