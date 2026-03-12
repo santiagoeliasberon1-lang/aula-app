@@ -364,7 +364,7 @@ function Login({ onLogin }) {
       if (perfil && !perfil.activo) {
         await supabase.auth.signOut();
         setLoading(false);
-        setErr("Tu cuenta está suspendida. Contactá al administrador.");
+        setErr("Tu cuenta está pendiente de activación. Realizá el pago y enviá el comprobante por WhatsApp.");
         return;
       }
     }
@@ -390,7 +390,7 @@ function Login({ onLogin }) {
       });
     }
     setLoading(false);
-    setOk("¡Cuenta creada! En breve el administrador habilitará tu acceso.");
+    setOk("✓ ¡Cuenta creada! Para activarla, realizá el pago y enviá el comprobante por WhatsApp. Te activamos en minutos.");
     setModo("login");
   };
 
@@ -1523,15 +1523,40 @@ export default function App() {
       <style>{styles}</style>
       <div className="login-wrap">
         <div className="login-bg" />
-        <div className="login-card" style={{ textAlign: "center" }}>
+        <div className="login-card" style={{ maxWidth: 480 }}>
           <div className="login-logo" style={{ justifyContent: "center" }}>
             <div className="login-logo-mark">A</div>
             <span className="login-logo-text">Aula</span>
           </div>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
-          <h2 style={{ fontFamily: "'DM Serif Display', serif", marginBottom: 8 }}>Cuenta suspendida</h2>
-          <p style={{ color: "var(--ink3)", fontSize: 14, marginBottom: 24 }}>Tu cuenta está temporalmente inactiva. Contactá al administrador para regularizar tu situación.</p>
-          <button className="btn-primary" onClick={logout}>Cerrar sesión</button>
+          <h2 style={{ fontFamily: "'DM Serif Display', serif", marginBottom: 6, textAlign: "center" }}>¡Ya casi estás!</h2>
+          <p style={{ color: "var(--ink3)", fontSize: 14, marginBottom: 24, textAlign: "center" }}>Tu cuenta está lista. Solo falta completar el pago para activarla.</p>
+
+          <div style={{ background: "var(--accent-light)", border: "1.5px solid var(--accent)", borderRadius: 12, padding: "16px 20px", marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "var(--accent)", marginBottom: 8 }}>Paso 1 — Realizá el pago</div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+              <span style={{ fontSize: 13, color: "var(--ink2)" }}>Alias Mercado Pago</span>
+              <span style={{ fontWeight: 700, fontSize: 15, color: "var(--ink)" }}>aula.app</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: 13, color: "var(--ink2)" }}>Monto mensual</span>
+              <span style={{ fontWeight: 700, fontSize: 18, color: "var(--accent)" }}>$ 2000</span>
+            </div>
+          </div>
+
+          <div style={{ background: "var(--gold-light)", border: "1.5px solid #e9c46a55", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "#b7860b", marginBottom: 8 }}>Paso 2 — Enviá el comprobante</div>
+            <p style={{ fontSize: 13, color: "var(--ink2)", marginBottom: 12 }}>Mandanos una captura del pago por WhatsApp y te activamos en minutos.</p>
+            <a
+              href={"https://wa.me/543772501736?text=" + encodeURIComponent("Hola! Acabo de registrarme en Aula y quiero activar mi cuenta. Te mando el comprobante del pago de $2000.")}
+              target="_blank"
+              rel="noreferrer"
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#25D366", color: "#fff", borderRadius: 10, padding: "12px 20px", fontWeight: 700, fontSize: 14, textDecoration: "none" }}
+            >
+              <span style={{ fontSize: 18 }}>💬</span> Enviar comprobante por WhatsApp
+            </a>
+          </div>
+
+          <button className="btn-ghost" style={{ width: "100%" }} onClick={logout}>Cerrar sesión</button>
         </div>
       </div>
     </>
