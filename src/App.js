@@ -389,8 +389,10 @@ function Login({ onLogin }) {
         activo: false
       });
     }
+    // Cerrar sesión para que vea la pantalla de pago al intentar entrar
+    await supabase.auth.signOut();
     setLoading(false);
-    setOk("✓ ¡Cuenta creada! Para activarla, realizá el pago y enviá el comprobante por WhatsApp. Te activamos en minutos.");
+    setOk("✓ ¡Cuenta creada! Iniciá sesión para ver las instrucciones de pago y activar tu cuenta.");
     setModo("login");
   };
 
@@ -1493,9 +1495,15 @@ export default function App() {
       }
       setLoadingAuth(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setBloqueado(false);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      const u = session?.user ?? null;
+      setUser(u);
+      if (u && u.id !== "088cf6c0-7e53-4999-ae1f-7f0c9222edbf") {
+        const { data: perfil } = await supabase.from("perfiles").select("activo").eq("id", u.id).single();
+        setBloqueado(perfil ? !perfil.activo : false);
+      } else {
+        setBloqueado(false);
+      }
     });
     return () => subscription.unsubscribe();
   }, []);
