@@ -345,14 +345,10 @@ function Toast({ msg }) {
 
 // ─── LOGIN / REGISTRO ─────────────────────────────────────────────────────────
 function Login({ onLogin }) {
-  const [modo, setModo] = useState("login"); // login | registro
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
-  const [nombre, setNombre] = useState("");
   const [err, setErr] = useState("");
-  const [ok, setOk] = useState("");
   const [loading, setLoading] = useState(false);
-  const [registroExitoso, setRegistroExitoso] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !pass) { setErr("Completá todos los campos."); return; }
