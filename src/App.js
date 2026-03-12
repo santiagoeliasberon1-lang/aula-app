@@ -1485,25 +1485,22 @@ export default function App() {
   const [aulaActual, setAulaActual] = useState(null);
   const [toast, setToast] = useState("");
 
+  const verificarPerfil = async (u) => {
+    if (!u) { setUser(null); setBloqueado(false); setLoadingAuth(false); return; }
+    if (u.id === "088cf6c0-7e53-4999-ae1f-7f0c9222edbf") { setUser(u); setBloqueado(false); setLoadingAuth(false); return; }
+    const { data: perfil } = await supabase.from("perfiles").select("activo").eq("id", u.id).single();
+    setUser(u);
+    setBloqueado(perfil ? !perfil.activo : true);
+    setLoadingAuth(false);
+  };
+
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      if (u && u.id !== "088cf6c0-7e53-4999-ae1f-7f0c9222edbf") {
-        const { data: perfil } = await supabase.from("perfiles").select("activo").eq("id", u.id).single();
-        if (perfil && !perfil.activo) setBloqueado(true);
-      }
-      setLoadingAuth(false);
+      await verificarPerfil(session?.user ?? null);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      const u = session?.user ?? null;
-      setUser(u);
-      if (u && u.id !== "088cf6c0-7e53-4999-ae1f-7f0c9222edbf") {
-        const { data: perfil } = await supabase.from("perfiles").select("activo").eq("id", u.id).single();
-        setBloqueado(perfil ? !perfil.activo : false);
-      } else {
-        setBloqueado(false);
-      }
+      setLoadingAuth(true);
+      await verificarPerfil(session?.user ?? null);
     });
     return () => subscription.unsubscribe();
   }, []);
