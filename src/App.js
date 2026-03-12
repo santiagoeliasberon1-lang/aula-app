@@ -360,78 +360,12 @@ function Login({ onLogin }) {
       const { data: perfil } = await supabase.from("perfiles").select("activo").eq("id", data.user.id).single();
       if (perfil && !perfil.activo) {
         await supabase.auth.signOut();
-        setLoading(false);
         setErr("Tu cuenta está pendiente de activación. Realizá el pago y enviá el comprobante por WhatsApp.");
         return;
       }
     }
     onLogin(data.user);
   };
-
-  const handleRegistro = async () => {
-    if (!email || !pass || !nombre) { setErr("Completá todos los campos."); return; }
-    if (pass.length < 6) { setErr("La contraseña debe tener al menos 6 caracteres."); return; }
-    setLoading(true); setErr("");
-    const { data, error } = await supabase.auth.signUp({
-      email, password: pass,
-      options: { data: { nombre_completo: nombre } }
-    });
-    if (error) { setLoading(false); setErr(error.message); return; }
-    // Crear perfil manualmente - inactivo hasta aprobación del admin
-    if (data?.user) {
-      await supabase.from("perfiles").insert({
-        id: data.user.id,
-        email: email,
-        nombre: nombre,
-        activo: false
-      });
-    }
-    setLoading(false);
-    setRegistroExitoso(true);
-  };
-
-  const handle = modo === "login" ? handleLogin : handleRegistro;
-
-return (
-    <div className="login-wrap">
-      <div className="login-bg" />
-      <div className="login-card" style={{ maxWidth: 460 }}>
-        <div className="login-logo" style={{ justifyContent: "center" }}>
-          <div className="login-logo-mark">A</div>
-          <span className="login-logo-text">Aula</span>
-        </div>
-        <h2 style={{ fontFamily: "'DM Serif Display', serif", marginBottom: 6, textAlign: "center" }}>¡Ya casi estás!</h2>
-        <p style={{ color: "var(--ink3)", fontSize: 14, marginBottom: 20, textAlign: "center" }}>Tu cuenta fue creada. Completá el pago para activarla.</p>
-
-        <div style={{ background: "var(--accent-light)", border: "1.5px solid var(--accent)", borderRadius: 12, padding: "16px 20px", marginBottom: 14 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "var(--accent)", marginBottom: 10 }}>Paso 1 — Realizá el pago</div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-            <span style={{ fontSize: 13, color: "var(--ink2)" }}>Alias Mercado Pago</span>
-            <span style={{ fontWeight: 700, fontSize: 15, color: "var(--ink)" }}>aula.app</span>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: 13, color: "var(--ink2)" }}>Monto mensual</span>
-            <span style={{ fontWeight: 700, fontSize: 18, color: "var(--accent)" }}>$ 2000</span>
-          </div>
-        </div>
-
-        <div style={{ background: "var(--gold-light)", border: "1.5px solid #e9c46a55", borderRadius: 12, padding: "16px 20px", marginBottom: 20 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".07em", color: "#b7860b", marginBottom: 8 }}>Paso 2 — Enviá el comprobante</div>
-          <p style={{ fontSize: 13, color: "var(--ink2)", marginBottom: 12 }}>Mandanos el comprobante por WhatsApp y te activamos en minutos.</p>
-          <a
-            href={"https://wa.me/543772501736?text=" + encodeURIComponent("Hola! Me registré en Aula con el email " + email + " y quiero activar mi cuenta. Te mando el comprobante del pago de $2000.")}
-            target="_blank"
-            rel="noreferrer"
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#25D366", color: "#fff", borderRadius: 10, padding: "12px 20px", fontWeight: 700, fontSize: 14, textDecoration: "none" }}
-          >
-            <span style={{ fontSize: 18 }}>💬</span> Enviar comprobante por WhatsApp
-          </a>
-        </div>
-
-
-      </div>
-    </div>
-  );
 
   return (
     <div className="login-wrap">
@@ -444,7 +378,6 @@ return (
         <h1 className="login-title">Bienvenido</h1>
         <p className="login-sub">Ingresá a tu panel docente</p>
         {err && <div className="login-error">{err}</div>}
-
         <div className="field">
           <label>Correo electrónico</label>
           <div className="field-inner">
