@@ -390,7 +390,6 @@ function Login({ onLogin }) {
         activo: false
       });
     }
-    await supabase.auth.signOut();
     setLoading(false);
     setRegistroExitoso(true);
   };
@@ -1527,22 +1526,13 @@ export default function App() {
   const [aulaActual, setAulaActual] = useState(null);
   const [toast, setToast] = useState("");
 
-  const verificarPerfil = async (u) => {
-    if (!u) { setUser(null); setBloqueado(false); setLoadingAuth(false); return; }
-    if (u.id === "088cf6c0-7e53-4999-ae1f-7f0c9222edbf") { setUser(u); setBloqueado(false); setLoadingAuth(false); return; }
-    const { data: perfil } = await supabase.from("perfiles").select("activo").eq("id", u.id).single();
-    setUser(u);
-    setBloqueado(perfil ? !perfil.activo : true);
-    setLoadingAuth(false);
-  };
-
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      await verificarPerfil(session?.user ?? null);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoadingAuth(false);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setLoadingAuth(true);
-      await verificarPerfil(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
     });
     return () => subscription.unsubscribe();
   }, []);
