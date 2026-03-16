@@ -399,15 +399,15 @@ function Login({ onLogin }) {
         <div style={{ marginTop: 20, background: "var(--gold-light)", border: "1.5px solid #e9c46a88", borderRadius: 12, padding: "14px 16px" }}>
           <div style={{ fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".06em", color: "#b7860b", marginBottom: 6 }}>¿Querés registrarte?</div>
           <p style={{ fontSize: 13, color: "var(--ink2)", marginBottom: 10, lineHeight: 1.5 }}>
-            Enviá <strong>$2000</strong> por Mercado Pago al alias <strong>aula.app</strong> y mandá el comprobante por WhatsApp para que te creemos la cuenta.
+            Contactanos por WhatsApp y te creamos una cuenta.
           </p>
           <a
-            href="https://wa.me/543772501736?text=Hola!%20Quiero%20registrarme%20en%20Aula.%20Te%20mando%20el%20comprobante%20del%20pago."
+            href="https://wa.me/543772501736?text=Hola!%20Quiero%20registrarme%20en%20Aula."
             target="_blank"
             rel="noreferrer"
             style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, background: "#25D366", color: "#fff", borderRadius: 10, padding: "10px 16px", fontWeight: 700, fontSize: 13, textDecoration: "none" }}
           >
-            <span style={{ fontSize: 16 }}>💬</span> Enviar comprobante por WhatsApp
+            <span style={{ fontSize: 16 }}>💬</span> Contactar por WhatsApp
           </a>
         </div>
       </div>
